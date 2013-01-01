@@ -9,11 +9,14 @@
 void log_printf( const char *str, ... )
 {
 	FILE * log_fd;
-	log_fd = fopen("sd:/log.txt", "a");
+	log_fd = fopen("sd:/log.txt", "a+");
+	
+	// Opening the file failed... lets try again..
 	if (!log_fd)
-		log_fd = fopen("sd:/log.txt", "a");
+		log_fd = fopen("sd:/log.txt", "a+");
 
-    if (log_fd == NULL) return;
+    if (log_fd == NULL)
+		return;
 	
 	va_list ap;
 	va_start(ap,str);

@@ -20,6 +20,13 @@
 #include "wode.h"
 #include "logger.h"
 
+//#define ENABLE_WBFS_DEBUG_LOG
+#ifdef ENABLE_WBFS_DEBUG_LOG
+#  define DBG_LOG(x, ...) do { log_printf(x, __VA_ARGS__); } while (0)
+#else
+#  define DBG_LOG(x, ...) do {}while (0)
+#endif // ENABLE_DEBUG_LOG
+
 unsigned long partition_idx = -1;
 void *discHeaders = NULL;
 
@@ -106,7 +113,7 @@ s32 WBFS_GetCountEx(u32 *count, s32 part, u32 * index)
 	/* Get list length */
 	cnt = GetNumISOs( part );
 	
-//	log_printf("part: %u [%s] contains: %u iso's\n", part, partname, cnt);
+	DBG_LOG("part: %u [%s] contains: %u iso's\n", part, partname, cnt);
 	
 	// Get all discHdrs
 	for (idx = 0; idx < cnt; idx++) {
@@ -133,7 +140,7 @@ s32 WBFS_GetCountEx(u32 *count, s32 part, u32 * index)
 		ptr->game_part = part;
 		ptr->magic = iso.iso_type == TYPE_GC ? GC_MAGIC : WII_MAGIC;
 		
-//		log_printf("\t[%u] iso: %u part: %u name:%s type:%u\n", (*index), idx, part, iso.name, iso.iso_type);
+		DBG_LOG("\t[%u] iso: %u part: %u name:%s type:%u\n", (*index), idx, part, iso.name, iso.iso_type);
 		
 		amount++;
 	}
@@ -224,7 +231,7 @@ s32 WBFS_populate_game_list_ex(std::vector<struct discHdr> & game_list, int part
 	/* Get list length */
 	cnt = GetNumISOs( part );
 	
-	//log_printf("part: %u [%s] contains: %u iso's\n", part, partname, cnt);
+	DBG_LOG("part: %u [%s] contains: %u iso's\n", part, partname, cnt);
 	
 	// Get all discHdrs
 	for (idx = 0; idx < cnt; idx++) {
@@ -250,7 +257,7 @@ s32 WBFS_populate_game_list_ex(std::vector<struct discHdr> & game_list, int part
 		disc.magic = iso.iso_type == TYPE_GC ? GC_MAGIC : WII_MAGIC;
 		game_list.push_back(disc);
 
-		//log_printf("\t[%u] iso: %u part: %u name:%s type:%u\n", (*index), idx, part, iso.name, iso.iso_type);
+		DBG_LOG("\t[%u] iso: %u part: %u name:%s type:%u\n", (*index), idx, part, iso.name, iso.iso_type);
 	}
 	
 	return 0;
@@ -412,3 +419,5 @@ f32 WBFS_EstimeGameSize(void) {
 	return 0;
 //    return wbfs_estimate_disc(hdd, __WBFS_ReadDVD, NULL, ONLY_GAME_PARTITION);
 }
+
+#undef DBG_LOG

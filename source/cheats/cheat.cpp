@@ -5,10 +5,18 @@
 
 #include "menu.hpp"
 #include "http.h"
+#include "logger.h"
 
 #define GECKOURL "http://www.geckocodes.org/codes/R/%s.txt"
 
 #define CHEATSPERPAGE 4
+
+//#define ENABLE_CHEAT_DEBUG_LOG
+#ifdef ENABLE_CHEAT_DEBUG_LOG
+#  define DBG_LOG(...) do { log_printf(__VA_ARGS__); } while (0)
+#else
+#  define DBG_LOG(...) do{}while(0)
+#endif // ENABLE_DEBUG_LOG
 
 void loadCheatFile(SmartBuf &buffer, u32 &size, const char *cheatPath, const char *gameId)
 {
@@ -146,37 +154,54 @@ void CMenu::_CheatSettings() {
 
 			if (m_btnMgr.selected() == m_cheatBtnDownload)
 			{
+				DBG_LOG("[cheat] download\n");
+			
 				// Download cheat code
 				m_btnMgr.hide(m_cheatLblTitle);
 				
-				u32 bufferSize = 0x100000;	// Maximum download size 1 MB
+				u32 bufferSize = 0x080000;	// Maximum download size 512 kb
 				SmartBuf buffer;
 				block cheatfile;
 				FILE *file;
 				char ip[16];
 				
-				if (!m_networkInit && _initNetwork(ip) < 0) {
+				if (!m_networkInit && _initNetwork(ip) < 0)
+				{
+					DBG_LOG("[cheat] network was unable to init\n");
+					
 					m_btnMgr.hide(m_cheatLblTitle);
 					break;
 				}
+				
 				m_networkInit = true;
 
 				buffer = smartCoverAlloc(bufferSize);
+				
+				DBG_LOG("[cheat] download begin\n");
 				cheatfile = downloadfile(buffer.get(), bufferSize, sfmt(GECKOURL, m_cf.getId().c_str()).c_str(),CMenu::_downloadProgress, this);
+				DBG_LOG("[cheat] download ends\n");
 
-				if (cheatfile.data != NULL && cheatfile.size > 65 && cheatfile.data[0] != '<') {
+				if (cheatfile.data != NULL && cheatfile.size > 65 && cheatfile.data[0] != '<')
+				{
+					DBG_LOG("[cheat] write buffer to file: %s/%s.txt\n", m_txtCheatDir.c_str(), m_cf.getId().c_str());
+					
 					// cheat file was downloaded and presumably no 404
 					file = fopen(fmt("%s/%s.txt", m_txtCheatDir.c_str(), m_cf.getId().c_str()), "wb");
 							
 					if (file != NULL)
 					{
+						DBG_LOG("[cheat] file handle opened\n");
 						fwrite(cheatfile.data, 1, cheatfile.size, file);
+						DBG_LOG("[cheat] cheat file written\n");
+						
 						fclose(file);
 						break;
 					}
 				}
 				else
 				{
+					DBG_LOG("[cheat] download not found\n");
+					
 					// cheat code not found, show result
 					m_btnMgr.setText(m_cheatLblItem[0], _t("cheat4", L"Download not found."));
 					m_btnMgr.setText(m_cheatLblItem[1], wfmt(L"http://www.geckocodes.org/codes/R/%s.txt",m_cf.getId().c_str()));

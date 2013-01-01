@@ -114,6 +114,9 @@ int old_main()
 	
 	LaunchISO(0, 0);
 	CloseWode();
+	
+	Fat_Unmount();
+	
 	return ret;
 };
 

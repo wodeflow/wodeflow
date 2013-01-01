@@ -3,10 +3,11 @@
 
 #include "config.hpp"
 #include "text.hpp"
+#include "string_utils.hpp"
 
 using namespace std;
 
-static const char *g_whitespaces = " \f\n\r\t\v";
+
 static const int g_floatPrecision = 10;
 
 const string Config::emptyString;
@@ -14,110 +15,6 @@ const string Config::emptyString;
 Config::Config(void) :
 	m_loaded(false), m_domains(), m_filename(), m_iter()
 {
-}
-
-static string trimEnd(string line)
-{
-	string::size_type i = line.find_last_not_of(g_whitespaces);
-	if (i == string::npos)
-		line.clear();
-	else
-		line.resize(i + 1);
-	return line;
-}
-
-static string trim(string line)
-{
-	string::size_type i = line.find_last_not_of(g_whitespaces);
-	if (i == string::npos)
-	{
-		line.clear();
-		return line;
-	}
-	else
-		line.resize(i + 1);
-	i = line.find_first_not_of(g_whitespaces);
-	if (i > 0)
-		line.erase(0, i);
-	return line;
-}
-
-static string upperCase(string text)
-{
-	char c;
-
-	for (string::size_type i = 0; i < text.size(); ++i)
-	{
-		c = text[i];
-		if (c >= 'a' && c <= 'z')
-			text[i] = c & 0xDF;
-	}
-	return text;
-}
-
-static string lowerCase(string text)
-{
-	char c;
-
-	for (string::size_type i = 0; i < text.size(); ++i)
-	{
-		c = text[i];
-		if (c >= 'A' && c <= 'Z')
-			text[i] = c | 0x20;
-	}
-	return text;
-}
-
-static string unescNewlines(const string &text)
-{
-	string s;
-	bool escaping = false;
-
-	s.reserve(text.size());
-	for (string::size_type i = 0; i < text.size(); ++i)
-	{
-		if (escaping)
-		{
-			switch (text[i])
-			{
-				case 'n':
-					s.push_back('\n');
-					break;
-				default:
-					s.push_back(text[i]);
-			}
-			escaping = false;
-		}
-		else if (text[i] == '\\')
-			escaping = true;
-		else
-			s.push_back(text[i]);
-	}
-	return s;
-}
-
-static string escNewlines(const string &text)
-{
-	string s;
-
-	s.reserve(text.size());
-	for (string::size_type i = 0; i < text.size(); ++i)
-	{
-		switch (text[i])
-		{
-			case '\n':
-				s.push_back('\\');
-				s.push_back('n');
-				break;
-			case '\\':
-				s.push_back('\\');
-				s.push_back('\\');
-				break;
-			default:
-				s.push_back(text[i]);
-		}
-	}
-	return s;
 }
 
 bool Config::hasDomain(const string &domain) const
