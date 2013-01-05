@@ -211,24 +211,25 @@ bool checkFmt(const wstringEx &ref, const wstringEx &format)
 
 wstringEx wfmt(const wstringEx &format, ...)
 {
+	// Don't care about performance
 	va_list va;
-	int length;
-	
-	wstringEx ws;
+	std::string f(format.toUTF8());
+	uint32_t length;
+	char *tmp;
 
 	va_start(va, format);
-	length = vswprintf(0, 0, format.c_str(), va) + 1;
-	
+	length = vsnprintf(0, 0, f.c_str(), va) + 1;
 	va_end(va);
-	
-	ws.resize(length);
-	
+	tmp = new char[length + 1];
 	va_start(va, format);
-	vswprintf(&ws[0], length, format.c_str(), va);
-	
+	vsnprintf(tmp, length, f.c_str(), va);
 	va_end(va);
+	wstringEx ws;
+	ws.fromUTF8(tmp);
+	delete[] tmp;
 	return ws;
 }
+
 
 std::vector<std::string> stringToVector(const std::string &text, char sep)
 {
