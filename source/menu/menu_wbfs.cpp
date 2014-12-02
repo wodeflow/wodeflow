@@ -103,7 +103,6 @@ bool CMenu::_wbfsOp(CMenu::WBFS_OP op)
 {
 	s32 padsState;
 	WPADData *wd;
-	u32 btn;
 	lwp_t thread = 0;
 	static discHdr header ATTRIBUTE_ALIGN(32);
 	bool done = false;
@@ -133,7 +132,7 @@ bool CMenu::_wbfsOp(CMenu::WBFS_OP op)
 		WPAD_ScanPads();
 		padsState = WPAD_ButtonsDown(0);
 		wd = WPAD_Data(0);
-		btn = _btnRepeat(wd->btns_h);
+		_btnRepeat(wd->btns_h);
 		if ((padsState & (WPAD_BUTTON_HOME | WPAD_BUTTON_B)) != 0 && !m_thrdWorking)
 			break;
 		if (wd->ir.valid)

@@ -34,7 +34,6 @@ bool CMenu::_code(char code[4], bool erase)
 {
 	s32 padsState;
 	WPADData *wd;
-	u32 btn;
 	u32 n = 0;
 	wchar_t codeLbl[] = L"_ _ _ _";
 
@@ -51,7 +50,7 @@ bool CMenu::_code(char code[4], bool erase)
 		WPAD_ScanPads();
 		padsState = WPAD_ButtonsDown(0);
 		wd = WPAD_Data(0);
-		btn = _btnRepeat(wd->btns_h);
+		_btnRepeat(wd->btns_h);
 		if ((padsState & (WPAD_BUTTON_HOME | WPAD_BUTTON_B)) != 0)
 			break;
 		if (wd->ir.valid)

@@ -80,7 +80,7 @@ static string upperCase(string text)
 {
 	char c;
 
-	for (string::size_type i = 0; i < text.size(); ++i)
+	for (std::size_t i = 0; i < text.size(); ++i)
 	{
 		c = text[i];
 		if (c >= 'a' && c <= 'z')
@@ -120,7 +120,6 @@ int CMenu::_configAdv(void)
 {
 	s32 padsState;
 	WPADData *wd;
-	u32 btn;
 	int nextPage = 0;
 	vector<string> themes;
 	int curTheme;
@@ -129,18 +128,21 @@ int CMenu::_configAdv(void)
 	listThemes(m_themeDir.c_str(), themes);
 	curTheme = 0;
 	for (u32 i = 0; i < themes.size(); ++i)
+	{
 		if (themes[i] == prevTheme)
 		{
 			curTheme = i;
 			break;
 		}
+	}
+
 	_showConfigAdv();
 	while (true)
 	{
 		WPAD_ScanPads();
 		padsState = WPAD_ButtonsDown(0);
 		wd = WPAD_Data(0);
-		btn = _btnRepeat(wd->btns_h);
+		_btnRepeat(wd->btns_h);
 		if ((padsState & (WPAD_BUTTON_HOME | WPAD_BUTTON_B)) != 0)
 			break;
 		if (wd->ir.valid)

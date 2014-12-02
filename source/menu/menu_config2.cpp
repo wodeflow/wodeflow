@@ -78,7 +78,6 @@ int CMenu::_config2(void)
 {
 	s32 padsState;
 	WPADData *wd;
-	u32 btn;
 	int nextPage = 0;
 
 	_showConfig2();
@@ -87,7 +86,7 @@ int CMenu::_config2(void)
 		WPAD_ScanPads();
 		padsState = WPAD_ButtonsDown(0);
 		wd = WPAD_Data(0);
-		btn = _btnRepeat(wd->btns_h);
+		_btnRepeat(wd->btns_h);
 		if ((padsState & (WPAD_BUTTON_HOME | WPAD_BUTTON_B)) != 0)
 			break;
 		if (wd->ir.valid)

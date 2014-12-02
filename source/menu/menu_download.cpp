@@ -400,7 +400,6 @@ void CMenu::_download(string gameId)
 {
 	s32 padsState;
 	WPADData *wd;
-	u32 btn;
 	lwp_t thread = 0;
 	int msg = 0;
 	wstringEx prevMsg;
@@ -416,7 +415,7 @@ void CMenu::_download(string gameId)
 		WPAD_ScanPads();
 		padsState = WPAD_ButtonsDown(0);
 		wd = WPAD_Data(0);
-		btn = _btnRepeat(wd->btns_h);
+		_btnRepeat(wd->btns_h);
 		if ((padsState & (WPAD_BUTTON_HOME | WPAD_BUTTON_B)) != 0 && !m_thrdWorking)
 			break;
 		if (wd->ir.valid)

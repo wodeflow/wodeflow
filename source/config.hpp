@@ -17,7 +17,7 @@ class Config
 public:
 	Config(void);
 	void clear(void) { m_domains.clear(); }
-	bool load(const char *filename = 0);
+	bool load(const char *filename = nullptr);
 	void save(void);
 	bool loaded(void) const { return m_loaded; }
 	bool has(const std::string &domain, const std::string &key) const;
