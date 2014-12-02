@@ -1,0 +1,6 @@
+build
+portlibs
+*.dol
+*.elf
+*.o
+*.d

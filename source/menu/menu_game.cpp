@@ -14,6 +14,7 @@
 #include "loader/wdvd.h"
 
 #include "gecko.h"
+#include "fourcc.h"
 
 using namespace std;
 
@@ -464,7 +465,7 @@ extern "C" {
 static void _extractBnr(SmartBuf &bnr, u32 &size, const string &gameId, unsigned long idx, unsigned long part)
 {
 	u32 discfilecount = 0;
-	u8 found = 0;
+	u8 found;
 	SmartBuf fstbuffer;
 	U8Entry *fstt;
 	SmartBuf buffer;
@@ -532,7 +533,7 @@ out:
 SmartBuf uncompressLZ77(u32 &size, const u8 *inputBuf, u32 inputLength)
 {
 	SmartBuf buffer;
-	if (inputLength <= 0x8 || *(const u32 *)inputBuf != 'LZ77' || inputBuf[4] != 0x10)
+	if (inputLength <= 0x8 || *(const u32 *)inputBuf != fourcc("LZ77") || inputBuf[4] != 0x10)
 		return buffer;
 	u32 uncSize = le32(((const u32 *)inputBuf)[1] << 8);
 	const u8 *inBuf = inputBuf + 8;
@@ -588,8 +589,10 @@ void CMenu::_loadGameSound(const std::string &id, unsigned long idx, unsigned lo
 	if (!bnr)
 		return;
 	const IMETHeader &imetHdr = *(IMETHeader *)bnr.get();
-	if (imetHdr.fcc != 'IMET')
+
+	if (imetHdr.fcc != fourcc("IMET"))
 		return;
+
 	bnrArc = (const u8 *)(&imetHdr + 1);
 	const U8Header &bnrArcHdr = *(U8Header *)bnrArc;
 	fst = (const U8Entry *)(bnrArc + bnrArcHdr.rootNodeOffset);
@@ -599,12 +602,12 @@ void CMenu::_loadGameSound(const std::string &id, unsigned long idx, unsigned lo
 	if (i >= fst[0].numEntries)
 		return;
 	soundBin = bnrArc + fst[i].fileOffset;
-	if (((IMD5Header *)soundBin)->fcc != 'IMD5')
+	if (((IMD5Header *)soundBin)->fcc != fourcc("IMD5"))
 		return;
 	soundChunk = soundBin + sizeof (IMD5Header);
 	sndType = *(u32 *)soundChunk;
 	soundChunkSize = fst[i].fileLength - sizeof (IMD5Header);
-	if (sndType == 'LZ77')
+	if (sndType == fourcc("LZ77"))
 	{
 		u32 uncSize;
 		uncompressed = uncompressLZ77(uncSize, soundChunk, soundChunkSize);
@@ -616,17 +619,17 @@ void CMenu::_loadGameSound(const std::string &id, unsigned long idx, unsigned lo
 	}
 	switch (sndType)
 	{
-		case 'RIFF':
+		case fourcc("RIFF"):
 			LWP_MutexLock(m_gameSndMutex);
 			m_gameSoundTmp.fromWAV(soundChunk, soundChunkSize);
 			LWP_MutexUnlock(m_gameSndMutex);
 			break;
-		case 'BNS ':
+		case fourcc("BNS "):
 			LWP_MutexLock(m_gameSndMutex);
 			m_gameSoundTmp.fromBNS(soundChunk, soundChunkSize);
 			LWP_MutexUnlock(m_gameSndMutex);
 			break;
-		case 'FORM':
+		case fourcc("FORM"):
 			LWP_MutexLock(m_gameSndMutex);
 			m_gameSoundTmp.fromAIFF(soundChunk, soundChunkSize);
 			LWP_MutexUnlock(m_gameSndMutex);

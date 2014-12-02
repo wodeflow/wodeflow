@@ -1,9 +1,11 @@
-
 #include "sound.hpp"
+#include "fourcc.h"
+
 #include <math.h>
 #include <asndlib.h>
 #include <fstream>
 #include <string.h>
+
 
 using namespace std;
 
@@ -110,15 +112,15 @@ bool SSoundEffect::fromWAV(const u8 *buffer, u32 size)
 	const SWaveHdr &hdr = *(SWaveHdr *)buffer;
 	if (size < sizeof hdr)
 		return false;
-	if (hdr.fccRIFF != 'RIFF')
+	if (hdr.fccRIFF != fourcc("RIFF"))
 		return false;
 	if (size < le32(hdr.size) + sizeof hdr.fccRIFF + sizeof hdr.size)
 		return false;
-	if (hdr.fccWAVE != 'WAVE')
+	if (hdr.fccWAVE != fourcc("WAVE"))
 		return false;
 	// Find fmt
 	const SWaveChunk *chunk = (const SWaveChunk *)(buffer + sizeof hdr);
-	while (&chunk->data < bufEnd && chunk->fcc != 'fmt ')
+	while (&chunk->data < bufEnd && chunk->fcc != fourcc("fmt "))
 		chunk = (const SWaveChunk *)(&chunk->data + le32(chunk->size));
 	if (&chunk->data >= bufEnd)
 		return false;
@@ -140,9 +142,9 @@ bool SSoundEffect::fromWAV(const u8 *buffer, u32 size)
 	freq = le32(fmtChunk.freq);
 	// Find data
 	chunk = (const SWaveChunk *)(&chunk->data + le32(chunk->size));
-	while (&chunk->data < bufEnd && chunk->fcc != 'data')
+	while (&chunk->data < bufEnd && chunk->fcc != fourcc("data"))
 		chunk = (const SWaveChunk *)(&chunk->data + le32(chunk->size));
-	if (chunk->fcc != 'data' || &chunk->data + le32(chunk->size) > bufEnd)
+	if (chunk->fcc != fourcc("data") || &chunk->data + le32(chunk->size) > bufEnd)
 		return false;
 	// Data found
 	data = smartMem2Alloc(le32(chunk->size));
@@ -209,15 +211,15 @@ bool SSoundEffect::fromAIFF(const u8 *buffer, u32 size)
 	const SWaveHdr &hdr = *(SWaveHdr *)buffer;
 	if (size < sizeof hdr)
 		return false;
-	if (hdr.fccRIFF != 'FORM')
+	if (hdr.fccRIFF != fourcc("FORM"))
 		return false;
 	if (size < hdr.size + sizeof hdr.fccRIFF + sizeof hdr.size)
 		return false;
-	if (hdr.fccWAVE != 'AIFF')
+	if (hdr.fccWAVE != fourcc("AIFF"))
 		return false;
 	// Find fmt
 	const SWaveChunk *chunk = (const SWaveChunk *)(buffer + sizeof hdr);
-	while (&chunk->data < bufEnd && chunk->fcc != 'COMM')
+	while (&chunk->data < bufEnd && chunk->fcc != fourcc("COMM"))
 		chunk = (const SWaveChunk *)(&chunk->data + chunk->size);
 	if (&chunk->data >= bufEnd)
 		return false;
@@ -237,9 +239,9 @@ bool SSoundEffect::fromAIFF(const u8 *buffer, u32 size)
 	freq = (u32)ConvertFromIeeeExtended(fmtChunk.freq);
 	// Find data
 	chunk = (const SWaveChunk *)(&chunk->data + chunk->size);
-	while (&chunk->data < bufEnd && chunk->fcc != 'SSND')
+	while (&chunk->data < bufEnd && chunk->fcc != fourcc("SSND"))
 		chunk = (const SWaveChunk *)(&chunk->data + chunk->size);
-	if (chunk->fcc != 'SSND' || &chunk->data + chunk->size > bufEnd)
+	if (chunk->fcc != fourcc("SSND") || &chunk->data + chunk->size > bufEnd)
 		return false;
 	// Data found
 	const SAIFFSSndChunk &dataChunk = *(const SAIFFSSndChunk *)chunk;
@@ -426,7 +428,7 @@ bool SSoundEffect::fromBNS(const u8 *buffer, u32 size)
 	const BNSHeader &hdr = *(BNSHeader *)buffer;
 	if (size < sizeof hdr)
 		return false;
-	if (hdr.fccBNS != 'BNS ')
+	if (hdr.fccBNS != fourcc("BNS "))
 		return false;
 	// Find info and data
 	BNSInfo infoChunk;
