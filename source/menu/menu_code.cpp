@@ -39,11 +39,13 @@ bool CMenu::_code(char code[4], bool erase)
 	wchar_t codeLbl[] = L"_ _ _ _";
 
 	WPAD_Rumble(WPAD_CHAN_0, 0);
-	memset(code, 0, sizeof code);
+	memset(code, 0, 4);
+
 	m_btnMgr.setText(m_codeLblTitle, codeLbl);
 	_showCode();
 	if (erase)
 		m_btnMgr.show(m_codeBtnErase);
+
 	while (true)
 	{
 		WPAD_ScanPads();
@@ -58,12 +60,13 @@ bool CMenu::_code(char code[4], bool erase)
 			m_btnMgr.up();
 		else if ((padsState & WPAD_BUTTON_DOWN) != 0)
 			m_btnMgr.down();
+
 		if ((padsState & WPAD_BUTTON_A) != 0)
 		{
 			m_btnMgr.click();
 			if (m_btnMgr.selected() == m_codeBtnErase)
 			{
-				memset(code, 0, sizeof code);
+				memset(code, 0, 4);
 				n = sizeof code;
 				break;
 			}
@@ -81,6 +84,7 @@ bool CMenu::_code(char code[4], bool erase)
 		}
 		if (n >= sizeof code)
 			break;
+
 		_mainLoopCommon(wd);
 	}
 	_hideCode();

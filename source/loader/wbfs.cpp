@@ -27,7 +27,7 @@
 #  define DBG_LOG(x, ...) do {}while (0)
 #endif // ENABLE_DEBUG_LOG
 
-unsigned long partition_idx = -1;
+long partition_idx = -1;
 void *discHeaders = NULL;
 
 s32 WBFS_Init()
@@ -77,7 +77,7 @@ s32 WBFS_OpenNamed(char *partition)
 	PartitionInfo_t t;
 	
 	if (!strncmp("all", partition, 3)) {
-		partition_idx = 0xFFFF; // enum of all... bleh...
+		partition_idx = -1; // enum of all... bleh...
 		return 0;
 	}
 	
@@ -272,7 +272,7 @@ s32 WBFS_populate_game_list(std::vector<struct discHdr> & game_list)
 	game_list.clear();
 	
 	/* list all iso's */
-	if (partition_idx == 0xFFFF) {
+	if (partition_idx == -1) {
 	
 		total_iso_count = GetTotalISOs();
 	
@@ -338,7 +338,7 @@ s32 WBFS_DiskSpace(f32 *used, f32 *free)
 }
 #endif
 
-s32 WBFS_OpenDisc(u8 *gameId, unsigned long game_idx, unsigned long part)
+s32 WBFS_OpenDisc(u8 *gameId, unsigned long game_idx, long part)
 {
 	/* No device open */
 	if (part == -1)

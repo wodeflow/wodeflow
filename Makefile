@@ -27,7 +27,6 @@ SOURCES		:=	source \
 				source/music \
 				source/network \
 				source/libs/libfat \
-				source/libs/libntfs \
 				source/libs/libwbfs
 
 DATA		:=	data  
@@ -41,15 +40,14 @@ INCLUDES	:=	source \
 				source/network \
 				source/libs \
 				source/libs/libfat \
-				source/libs/libntfs \
 				source/libs/libwbfs
 
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
-CFLAGS	 =	-g -std=gnu99   -Os -Wall -Wno-char-subscripts -fno-strict-aliasing $(MACHDEP) $(INCLUDE) -DHAVE_CONFIG_H
-CXXFLAGS =	-g -std=gnu++11 -Os -Wall -Wno-char-subscripts -Wextra $(MACHDEP) $(INCLUDE) -DHAVE_CONFIG_H
+CFLAGS	 = -g -std=gnu11   -Os -Wall -Wextra -fno-strict-aliasing $(MACHDEP) $(INCLUDE) -DHAVE_CONFIG_H
+CXXFLAGS = -g -std=gnu++11 -Os -Wall -Wextra $(MACHDEP) $(INCLUDE) -DHAVE_CONFIG_H
  
 LDFLAGS	 =	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map,--section-start,.init=0x80B00000,-wrap,malloc,-wrap,free,-wrap,memalign,-wrap,calloc,-wrap,realloc,-wrap,malloc_usable_size -T../rvl.ld
 

@@ -465,7 +465,6 @@ extern "C" {
 static void _extractBnr(SmartBuf &bnr, u32 &size, const string &gameId, unsigned long idx, unsigned long part)
 {
 	u32 discfilecount = 0;
-	u8 found;
 	SmartBuf fstbuffer;
 	U8Entry *fstt;
 	SmartBuf buffer;
@@ -514,7 +513,6 @@ static void _extractBnr(SmartBuf &bnr, u32 &size, const string &gameId, unsigned
 	discfilecount = fstt[0].fileLength;
 	for (u32 i = 0; i < discfilecount; i++) {
 		if(strcasestr(u8Filename(fstt, i), "opening.bnr" ) && !fstt[i].fileType) {
-			found =1;
 			bnr = smartMem2Alloc(fstt[i].fileLength);
 			ret = WDVD_Read(bnr.get(), fstt[i].fileLength, fstt[i].fileOffset << 2);
 			if (ret < 0) {
