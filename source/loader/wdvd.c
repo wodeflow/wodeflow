@@ -29,6 +29,8 @@ static u32 outbuf[8] ATTRIBUTE_ALIGN(32);
 static const char di_fs[] ATTRIBUTE_ALIGN(32) = "/dev/di";
 static s32 di_fd = -1;
 
+#if WODE_EMULATION_MODE == 0
+
 s32 WDVD_Init(void)
 {
 	/* Open "/dev/di" */
@@ -242,7 +244,7 @@ s32 WDVD_StopMotor(void)
 
 s32 WDVD_OpenPartition(u64 offset, void* Ticket, void* Certificate, unsigned int Cert_Len, void* Out)
 {
-	static ioctlv	Vectors[5]		__attribute__((aligned(0x20)));
+	static ioctlv Vectors[5] __attribute__((aligned(0x20)));
 	s32 ret;
 
 	memset(inbuf, 0, sizeof inbuf);
@@ -433,3 +435,88 @@ s32 WDVD_GetCoverStatus(u32 *status)
 
 	return -ret;
 }
+
+#else
+
+s32 WDVD_Init(void)
+{
+	return 0; // this is wierd...  shouldn't we return > 0 here?
+}
+
+s32 WDVD_Close(void)
+{
+	return 0;
+}
+
+s32 WDVD_GetHandle(void)
+{
+	return di_fd;
+}
+
+s32 WDVD_Reset(void)
+{
+	return 0;
+}
+
+s32 WDVD_ReadDiskId(void * id)
+{
+	return 0;
+}
+
+s32 WDVD_Seek(u64 offset)
+{
+	return 0;
+}
+
+s32 WDVD_Offset(u64 offset)
+{
+	return 0;
+}
+
+s32 WDVD_StopLaser(void)
+{
+	return 0;
+}
+
+s32 WDVD_StopMotor(void)
+{
+	return 0;
+}
+
+s32 WDVD_OpenPartition(u64 offset, void* Ticket, void* Certificate, unsigned int Cert_Len, void* Out)
+{
+	return 0;
+}
+
+s32 WDVD_OpenPartitionSimple(u64 offset)
+{
+	return 0;
+}
+
+s32 WDVD_ClosePartition(void)
+{
+	return 0;
+}
+
+s32 WDVD_UnencryptedRead(void *, u32, u64)
+{
+	return 0;
+}
+
+s32 WDVD_Read(void *, u32, u64)
+{
+	return 0;
+}
+
+s32 WDVD_WaitForDisc(void)
+{
+	return 0;
+}
+
+s32 WDVD_GetCoverStatus(u32 * status)
+{
+	*status = 2;
+	return 0;
+}
+
+#endif

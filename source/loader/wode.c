@@ -72,6 +72,8 @@ int use_dvdx = 1;
 int is_wii_disc = 0;
 dvdcmdblk cmdblk;
 
+#if WODE_EMULATION_MODE == 0
+
 int DVDW_Read(void *buf, uint32_t len, uint32_t offset)
 {
 	if (use_dvdx) {
@@ -491,3 +493,139 @@ int GetTotalISOs( void )
 	}
 	return TotalISOs;
 }
+
+#else
+
+int InitDVD()
+{
+	gprintf("InitDVD\n");
+	return 0;
+}
+
+int OpenWode(void)
+{
+	gprintf("OpenWode\n");
+	return 2;
+}
+
+int CloseWode(void)
+{
+	gprintf("CloseWode\n");
+	return 0;
+}
+
+unsigned long GetNumPartitions(void)
+{
+	gprintf("GetNumPartitions\n");
+	return 2;
+}
+
+unsigned long GetNumISOs(unsigned long partition_idx)
+{
+	gprintf("GetNumISOs\n");
+	return 10;
+}
+
+int GetPartitionInfo(unsigned long partition_idx, PartitionInfo_t* PartitionInfo)
+{
+	gprintf("GetPartitionInfo\n");
+	// add more info
+
+	//memcpy(PartitionInfo->name,dvdbuffer,64);
+	//memcpy(PartitionInfo->name,"dev",64);
+	sprintf(PartitionInfo->name, "dev%u", partition_idx);
+	PartitionInfo->NumISOs = 10;
+	//PartitionInfo->partition_type 	= *((unsigned long*)&dvdbuffer[68]);
+	PartitionInfo->partition_mode = pm_read_write;
+
+
+	return 0;
+}
+
+int GetISOInfo(unsigned long partition_idx, unsigned long iso_idx, ISOInfo_t * ISOInfo)
+{
+	// add more info
+
+	//char name[64];
+	//unsigned long  iso_type;
+	//unsigned long  iso_region;
+	//char header[8];
+
+	//TYPE_GC
+
+	//gprintf("GetISOInfo\n");
+
+	ISOInfo->iso_type = TYPE_WII;
+	ISOInfo->iso_region = 0; // I dono if this really matters...
+
+	//memcpy(ISOInfo->name,"test\0",5);
+	sprintf(ISOInfo->name, "par: %u | ISO: %u", partition_idx, iso_idx);
+	return 0;
+}
+
+unsigned long GetMaxFavorites(void)
+{
+	return 8;
+}
+
+int GetNumFavorites(void)
+{
+	return 0;
+}
+
+int GetFavoriteInfo(unsigned long index, FavoriteInfo_t * favoriteInfo)
+{
+	return 0;
+}
+
+int EraseFavorite(unsigned long idx)
+{
+	return 0;
+}
+
+int InsertFavorite(unsigned long IsoIndex, unsigned long favorite_idx)
+{
+	return 0;
+}
+
+unsigned long SaveSettings(void)
+{
+	return 0;
+}
+
+int GetSettings(s_user_settings * settings)
+{
+	return 0;
+}
+
+int GetVersions(device_versions * versions)
+{
+	return 0;
+}
+
+int GetTotalISOs(void)
+{
+	return 10;
+}
+
+unsigned long GetSelectedISO(void)
+{
+	return 1;
+}
+
+int LaunchISO(unsigned long Partition, unsigned long Iso)
+{
+	return 0;
+}
+
+int SetAutoBoot(unsigned long autoboot)
+{
+	return 0;
+}
+
+unsigned long GotoFlatMode(void)
+{
+	return 0;
+}
+
+#endif

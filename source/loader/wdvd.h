@@ -1,6 +1,8 @@
 #ifndef _WDVD_H_
 #define _WDVD_H_
 
+#include "config_flags.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

@@ -1,6 +1,8 @@
 #ifndef __WODE_INTERFACE_H__
 #define __WODE_INTERFACE_H__
 
+#include "config_flags.h"
+
 extern int use_dvdx;
 
 typedef enum {

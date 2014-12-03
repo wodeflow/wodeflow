@@ -69,24 +69,32 @@ int old_main()
 
 	dipOK = Disc_Init() >= 0;
 	if (dipOK) {
+
 		u32 status = 0;
+
 		if (WDVD_GetCoverStatus(&status) != 0 || (status & 2) == 0) {
-			// WDVD_WaitForDisc();
-			
+
 			STexture texWaitForDisc;
 			texWaitForDisc.fromPNG(wait_disc_png, GX_TF_RGB565, ALLOC_MALLOC);
 			vid.waitMessage(texWaitForDisc);
 			texWaitForDisc.data.release();
+
+			WDVD_WaitForDisc();
+
+			/*
 			do
 			{
 				WPAD_ScanPads();
 				s32 padsState = WPAD_ButtonsDown(0);
 				if ((padsState & WPAD_BUTTON_B) != 0)
 					break;
+
 				usleep(100 * 1000);
-			} while (WDVD_GetCoverStatus(&status) != 0 || (status & 2) == 0);
+
+			} while (WDVD_GetCoverStatus(&status) != 0 || (status & 2) == 0);			status = 2;
+
 			if ((status & 2) == 0) return -2;
-			
+			*/
 			InitDVD();
 		}
 	}
