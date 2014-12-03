@@ -108,7 +108,7 @@ bool Sys_DolphinMode(void)
 	u32 ifpr12 = 0x9abcdef0;
 	u32 ofpr1 = 0x00000000;
 	u32 ofpr2 = 0x00000000;
-	asm volatile (
+	__asm__ __volatile__(
 		"lwz 3,%[ifpr11]\n\t"
 		"stw 3,8(1)\n\t"
 		"lwz 3,%[ifpr12]\n\t"
