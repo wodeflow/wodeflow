@@ -15,6 +15,8 @@ Some minor changes: IsCodeEx new
 #include <string.h>
 #include "gct.h"
 
+using namespace std;
+
 #define ERRORRANGE "Error: CheatNr out of range"
 
 GCTCheats::GCTCheats(void) {

@@ -1,4 +1,4 @@
-/*
+/*!
  * gct.h
  * Class to handle Ocarina TXT Cheatfiles
  * 
@@ -11,16 +11,14 @@
 
 #define MAXCHEATS 100
 
-using namespace std;
-
 //!Handles Ocarina TXT Cheatfiles
 class GCTCheats {
 private:
-    string sGameID;
-    string sGameTitle;
-    string sCheatName[MAXCHEATS];
-    string sCheats[MAXCHEATS];
-    string sCheatComment[MAXCHEATS];
+    std::string sGameID;
+	std::string sGameTitle;
+	std::string sCheatName[MAXCHEATS];
+	std::string sCheats[MAXCHEATS];
+	std::string sCheatComment[MAXCHEATS];
     unsigned int iCntCheats;
 
 public:
@@ -57,7 +55,7 @@ public:
 	//!Creates directly gct in memory
     //!\param filename name of TXT file
     //!\return GCT buffer
-    string createGCTbuff(int nr[],int cnt);
+	std::string createGCTbuff(int nr[], int cnt);
     //!Creates TXT file
     //!\param filename name of GCT file
     //!\return error code
@@ -67,19 +65,19 @@ public:
     unsigned int getCnt();
     //!Gets Game Name
     //!\return Game Name
-    string getGameName(void);
+	std::string getGameName(void);
     //!Gets GameID
     //!\return GameID
-    string getGameID(void);
+	std::string getGameID(void);
     //!Gets cheat data
     //!\return cheat data
-    string getCheat(unsigned int nr);
+	std::string getCheat(unsigned int nr);
     //!Gets Cheat Name
     //!\return Cheat Name
-    string getCheatName(unsigned int nr);
+	std::string getCheatName(unsigned int nr);
     //!Gets Cheat Comment
     //!\return Cheat Comment
-    string getCheatComment(unsigned int nr);
+	std::string getCheatComment(unsigned int nr);
 	//!Check if string is a code
     //!\return true/false
 	bool IsCode(const std::string& s);

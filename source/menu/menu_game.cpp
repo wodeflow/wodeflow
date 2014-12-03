@@ -617,20 +617,22 @@ void CMenu::_loadGameSound(const std::string &id, unsigned long idx, unsigned lo
 	switch (sndType)
 	{
 		case fourcc("RIFF"):
-			LWP_MutexLock(m_gameSndMutex);
+		{
+			lock_guard<mutex> lock(m_gameSndMutex);
 			m_gameSoundTmp.fromWAV(soundChunk, soundChunkSize);
-			LWP_MutexUnlock(m_gameSndMutex);
-			break;
+		} break;
+
 		case fourcc("BNS "):
-			LWP_MutexLock(m_gameSndMutex);
+		{
+			lock_guard<mutex> lock(m_gameSndMutex);
 			m_gameSoundTmp.fromBNS(soundChunk, soundChunkSize);
-			LWP_MutexUnlock(m_gameSndMutex);
-			break;
+		} break;
+
 		case fourcc("FORM"):
-			LWP_MutexLock(m_gameSndMutex);
+		{
+			lock_guard<mutex> lock(m_gameSndMutex);
 			m_gameSoundTmp.fromAIFF(soundChunk, soundChunkSize);
-			LWP_MutexUnlock(m_gameSndMutex);
-			break;
+		} break;
 	}
 }
 
@@ -640,23 +642,25 @@ int CMenu::_loadGameSoundThrd(CMenu *m)
 	string id;
 	unsigned long idx, part;
 
-	LWP_MutexLock(m->m_gameSndMutex);
+	m->m_gameSndMutex.lock();
 	id = m->m_gameSoundId;
 	idx = m->m_gameSoundIdx;
 	part = m->m_gameSoundPart;
 	m->m_gameSoundId.clear();
 	m->m_gameSoundIdx = -1;
-	LWP_MutexUnlock(m->m_gameSndMutex);
+	m->m_gameSndMutex.unlock();
+
 	while (id != prevId && !id.empty())
 	{
 		prevId = id;
 		m->_loadGameSound(id, idx, part);
-		LWP_MutexLock(m->m_gameSndMutex);
+
+		m->m_gameSndMutex.lock();
 		id = m->m_gameSoundId;
 		m->m_gameSoundId.clear();
 		m->m_gameSoundIdx = -1;
 		m->m_gameSoundPart = -1;
-		LWP_MutexUnlock(m->m_gameSndMutex);
+		m->m_gameSndMutex.unlock();
 	}
 	m->m_gameSoundThread = 0;
 	return 0;
@@ -666,12 +670,13 @@ void CMenu::_playGameSound(void)
 {
 	if (m_bnrSndVol == 0)
 		return;
-	LWP_MutexLock(m_gameSndMutex);
+
+	m_gameSndMutex.lock();
 	m_gameSoundId = m_cf.getId();
 	m_gameSoundIdx = m_cf.getIdx();
 	m_gameSoundPart = m_cf.getPart();
-	
-	LWP_MutexUnlock(m_gameSndMutex);
+	m_gameSndMutex.unlock();
+
 	m_cf.stopPicLoader();
 	if (m_gameSoundThread == 0)
 		LWP_CreateThread(&m_gameSoundThread, (void *(*)(void *))CMenu::_loadGameSoundThrd, (void *)this, 0, 8 * 1024, 40);
@@ -681,6 +686,7 @@ void CMenu::_waitForGameSoundExtract(void)
 {
 	for (int i = 0; i < 30 && m_gameSoundThread != 0; ++i)	// 3 s
 		usleep(100000);
+
 	if (m_gameSoundThread != 0)
 	{
 		error(L"Error while reading a game disc");

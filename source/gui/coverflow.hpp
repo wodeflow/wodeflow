@@ -16,6 +16,8 @@
 #include "sound.hpp"
 #include "wode.h"
 
+#include "threading\mutex.h"
+
 class CCoverFlow
 {
 public:
@@ -212,7 +214,7 @@ private:
 	int m_delay;
 	int m_minDelay;
 	int m_jump;
-	mutex_t m_mutex;
+	mutex m_mutex;
 	volatile bool m_loadingPic;
 	volatile bool m_waitingToClear;
 	volatile bool m_moved;

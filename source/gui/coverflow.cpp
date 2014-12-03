@@ -12,6 +12,7 @@
 #include "pngu.h"
 #include "boxmesh.hpp"
 #include "wstringEx.hpp"
+#include "threading/mutex.h"
 
 #include "gecko.h"
 
@@ -27,13 +28,7 @@ extern const u8 flatloading_png[];
 extern const u8 cffont_ttf[];
 extern const u32 cffont_ttf_size;
 
-class LockMutex
-{
-	mutex_t &m_mutex;
-public:
-	LockMutex(mutex_t &m) : m_mutex(m) { LWP_MutexLock(m_mutex); }
-	~LockMutex(void) { LWP_MutexUnlock(m_mutex); }
-};
+
 
 static inline int loopNum(int i, int s)
 {
@@ -177,7 +172,6 @@ CCoverFlow::CCoverFlow(void)
 	m_delay = 0;
 	m_minDelay = 5;
 	m_jump = 0;
-	m_mutex = 0;
 	m_loadingPic = false;
 	m_waitingToClear = false;
 	m_moved = false;
@@ -212,8 +206,6 @@ CCoverFlow::CCoverFlow(void)
 	m_mouse = -1;
 	m_snd2 = false;
 	m_soundVolume = 0xFF;
-	// 
-	LWP_MutexInit(&m_mutex, 0);
 }
 
 bool CCoverFlow::init(void)
@@ -240,7 +232,6 @@ void CCoverFlow::simulateOtherScreenFormat(bool s)
 CCoverFlow::~CCoverFlow(void)
 {
 	clear();
-	LWP_MutexDestroy(m_mutex);
 }
 
 void CCoverFlow::setCachePath(const char *path, bool deleteSource, bool compress)
@@ -553,7 +544,8 @@ void CCoverFlow::stopSound(void)
 
 void CCoverFlow::applySettings(void)
 {
-	LockMutex lock(m_mutex);
+	lock_guard<mutex> lock(m_mutex);
+
 	if (m_covers.empty())
 		return;
 	_updateAllTargets();
@@ -901,7 +893,8 @@ void CCoverFlow::draw(void)
 
 void CCoverFlow::drawText(bool withRectangle)
 {
-	LockMutex lock(m_mutex);
+	lock_guard<mutex> lock(m_mutex);
+	
 	Vector3D up(0.f, 1.f, 0.f);
 	Vector3D dir(m_cameraAim);
 	Vector3D pos(m_cameraPos);
@@ -933,7 +926,7 @@ inline int innerToOuter(int i, int range)
 
 void CCoverFlow::_draw(DrawMode dm, bool mirror, bool blend)
 {
-	LockMutex lock(m_mutex);
+	lock_guard<mutex> lock(m_mutex);
 	Vector3D up(0.f, 1.f, 0.f);
 	Vector3D dir(m_cameraAim);
 	Vector3D pos(m_cameraPos);
@@ -1409,7 +1402,7 @@ bool CCoverFlow::select(void)
 {
 	int j;
 	int curPos;
-	LockMutex lock(m_mutex);
+	lock_guard<mutex> lock(m_mutex);
 
 	if (m_covers.empty() || m_jump != 0)
 		return false;
@@ -1439,7 +1432,7 @@ bool CCoverFlow::select(void)
 
 void CCoverFlow::cancel(void)
 {
-	LockMutex lock(m_mutex);
+	lock_guard<mutex> lock(m_mutex);
 	if (m_covers.empty())
 		return;
 	_unselect();
@@ -1684,7 +1677,7 @@ bool CCoverFlow::start(const char *id)
 
 void CCoverFlow::up(void)
 {
-	LockMutex lock(m_mutex);
+	lock_guard<mutex> lock(m_mutex);
 	if (m_covers.empty())
 		return;
 	if (m_jump != 0)
@@ -1694,7 +1687,7 @@ void CCoverFlow::up(void)
 
 void CCoverFlow::down(void)
 {
-	LockMutex lock(m_mutex);
+	lock_guard<mutex> lock(m_mutex);
 	if (m_covers.empty())
 		return;
 	if (m_jump != 0)
@@ -1704,7 +1697,7 @@ void CCoverFlow::down(void)
 
 void CCoverFlow::left(void)
 {
-	LockMutex lock(m_mutex);
+	lock_guard<mutex> lock(m_mutex);
 	if (m_covers.empty())
 		return;
 	if (m_jump != 0)
@@ -1714,7 +1707,7 @@ void CCoverFlow::left(void)
 
 void CCoverFlow::right(void)
 {
-	LockMutex lock(m_mutex);
+	lock_guard<mutex> lock(m_mutex);
 	if (m_covers.empty())
 		return;
 	if (m_jump != 0)
@@ -1862,7 +1855,7 @@ bool CCoverFlow::mouseOver(CVideo &vid, int x, int y)
 
 bool CCoverFlow::findId(const char *id, bool instant)
 {
-	LockMutex lock(m_mutex);
+	lock_guard<mutex> lock(m_mutex);
 	string strId(id);
 	u32 i;
 	int j;
@@ -1953,7 +1946,7 @@ void CCoverFlow::pageDown(void)
 
 void CCoverFlow::flip(bool force, bool f)
 {
-	LockMutex lock(m_mutex);
+	lock_guard<mutex> lock(m_mutex);
 	if (m_covers.empty() || !m_selected)
 		return;
 	CCoverFlow::CCover &cvr = m_covers[m_range / 2];
@@ -2018,7 +2011,7 @@ void CCoverFlow::_completeJump(void)
 
 wchar_t CCoverFlow::nextLetter(void)
 {
-	LockMutex lock(m_mutex);
+	lock_guard<mutex> lock(m_mutex);
 	u32 curPos;
 	u32 n = m_items.size();
 	u32 i;
@@ -2043,7 +2036,7 @@ wchar_t CCoverFlow::nextLetter(void)
 
 wchar_t CCoverFlow::prevLetter(void)
 {
-	LockMutex lock(m_mutex);
+	lock_guard<mutex> lock(m_mutex);
 	u32 curPos;
 	u32 n = m_items.size();
 	u32 i;
@@ -2139,7 +2132,7 @@ void CCoverFlow::_jump(void)
 
 void CCoverFlow::tick(void)
 {
-	LockMutex lock(m_mutex);
+	lock_guard<mutex> lock(m_mutex);
 	if (m_covers.empty())
 		return;
 	++m_tickCount;
@@ -2262,11 +2255,13 @@ bool CCoverFlow::_loadCoverTexPNG(u32 i, bool box, bool hq)
 		return false;
 	if (m_waitingToClear)
 		return false;
-	LWP_MutexLock(m_mutex);
+	
+	m_mutex.lock();
 	m_items[i].texture = tex;
 	m_items[i].boxTexture = box;
 	m_items[i].state = CCoverFlow::STATE_Ready;
-	LWP_MutexUnlock(m_mutex);
+	m_mutex.unlock();
+
 	// Save the texture to the cache folder for the next time
 	if (!m_cachePath.empty())
 	{
@@ -2308,7 +2303,7 @@ bool CCoverFlow::_calcTexLQLOD(STexture &tex)
 
 void CCoverFlow::_dropHQLOD(int i)
 {
-	LockMutex lock(m_mutex);
+	lock_guard<mutex> lock(m_mutex);
 	if ((u32)i >= m_items.size())
 		return;
 	STexture &prevTex = m_items[i].texture;
@@ -2391,7 +2386,7 @@ CCoverFlow::CLRet CCoverFlow::_loadCoverTex(u32 i, bool box, bool hq)
 							{
 								if (header.zipped != 0)
 									memcpy(tex.data.get(), ptrTex.get() + bufSize - texLen, texLen);
-								LockMutex lock(m_mutex);
+								lock_guard<mutex> lock(m_mutex);
 								m_items[i].texture = tex;
 								DCFlushRange(tex.data.get(), texLen);
 								m_items[i].state = CCoverFlow::STATE_Ready;
@@ -2443,10 +2438,11 @@ int CCoverFlow::_picLoader(CCoverFlow *cf)
 		for (u32 j = numItems - 1; j > lastVisible; --j)
 		{
 			i = loopNum((j & 1) != 0 ? firstItem - (j + 1) / 2 : firstItem + j / 2, numItems);
-			LWP_MutexLock(cf->m_mutex);
+			
+			cf->m_mutex.lock();
 			cf->m_items[i].texture.data.release();
 			cf->m_items[i].state = CCoverFlow::STATE_Loading;
-			LWP_MutexUnlock(cf->m_mutex);
+			cf->m_mutex.unlock();
 		}
 		for (u32 j = 0; j <= lastVisible; ++j)
 		{

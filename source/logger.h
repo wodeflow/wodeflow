@@ -5,9 +5,8 @@
 extern "C" {
 #endif
 
-void log_printf( const char *str, ... );
-void log_hex( const char *str, int len);
-
+void log_printf(const char *str, ... );
+void log_hex(const char *str, int len);
 
 #ifdef __cplusplus
 }

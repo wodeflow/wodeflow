@@ -1,4 +1,3 @@
-
 #include "menu.hpp"
 #include "loader/sys.h"
 #include "loader/wbfs.h"
@@ -18,7 +17,8 @@
 
 using namespace std;
 
-static const char FMT_BPIC_URL[] = "http://wiitdb.com/wiitdb/artwork/coverfullHQ/{loc}/{gameid6}.png"\
+static const char FMT_BPIC_URL[] =
+"http://wiitdb.com/wiitdb/artwork/coverfullHQ/{loc}/{gameid6}.png"\
 "|http://wiitdb.com/wiitdb/artwork/coverfullHQ/EN/{gameid6}.png"\
 "|http://wiitdb.com/wiitdb/artwork/coverfull/{loc}/{gameid6}.png"\
 "|http://wiitdb.com/wiitdb/artwork/coverfull/EN/{gameid6}.png"\
@@ -30,14 +30,6 @@ static const char FMT_PIC_URL[] = "http://wiitdb.com/wiitdb/artwork/cover/{loc}/
 "|http://www.muntrue.nl/covers/ALL/160/225/boxart/{gameid6}.png";//
 //"|http://wiitdb.com/wiitdb/artwork/cover/{loc}/{gameid4}.png"
 //"|http://wiitdb.com/wiitdb/artwork/cover/EN/{gameid4}.png";
-
-class LockMutex
-{
-	mutex_t &m_mutex;
-public:
-	LockMutex(mutex_t &m) : m_mutex(m) { LWP_MutexLock(m_mutex); }
-	~LockMutex(void) { LWP_MutexUnlock(m_mutex); }
-};
 
 static string countryCode(const string &gameId)
 {
@@ -166,14 +158,13 @@ void CMenu::_showDownload(void)
 
 void CMenu::_setThrdMsg(const wstringEx &msg, float progress)
 {
-	LWP_MutexLock(m_mutex);
+	lock_guard<mutex> lock(m_mutex);
 	if (!m_thrdStop) {
 		if (msg != L"...")
 			m_thrdMessage = msg;
 		m_thrdMessageAdded = true;
 		m_thrdProgress = progress;
 	}
-	LWP_MutexUnlock(m_mutex);
 }
 
 bool CMenu::_downloadProgress(void *obj, int size, int position)
@@ -466,7 +457,7 @@ void CMenu::_download(string gameId)
 			}
 			else if (m_btnMgr.selected() == m_downloadBtnCancel)
 			{
-				LockMutex lock(m_mutex);
+				lock_guard<mutex> lock(m_mutex);
 				m_thrdStop = true;
 				m_thrdMessageAdded = true;
 				m_thrdMessage = _t("dlmsg6", L"Canceling...");
@@ -474,7 +465,7 @@ void CMenu::_download(string gameId)
 		}
 		if (Sys_Exiting())
 		{
-			LockMutex lock(m_mutex);
+			lock_guard<mutex> lock(m_mutex);
 			m_thrdStop = true;
 			m_thrdMessageAdded = true;
 			m_thrdMessage = _t("dlmsg6", L"Canceling...");
@@ -482,7 +473,7 @@ void CMenu::_download(string gameId)
 		// 
 		if (m_thrdMessageAdded)
 		{
-			LockMutex lock(m_mutex);
+			lock_guard<mutex> lock(m_mutex);
 			m_thrdMessageAdded = false;
 			m_btnMgr.setProgress(m_downloadPBar, m_thrdProgress);
 			if (m_thrdProgress == 1.f)

@@ -17,7 +17,7 @@ class CMenu
 {
 public:
 	CMenu(CVideo &vid);
-	~CMenu(void) { cleanup(); }
+	~CMenu(void);
 	void init(bool fromHBC);
 	void error(const wstringEx &msg);
 	int main(void);
@@ -305,7 +305,7 @@ private:
 	float m_thrdStep;
 	float m_thrdStepLen;
 	std::string m_coverDLGameId;
-	mutex_t m_mutex;
+	mutex m_mutex;
 	wstringEx m_thrdMessage;
 	volatile float m_thrdProgress;
 	volatile bool m_thrdMessageAdded;
@@ -315,13 +315,13 @@ private:
 	unsigned long m_gameSoundIdx;
 	unsigned long m_gameSoundPart;
 	lwp_t m_gameSoundThread;
-	mutex_t m_gameSndMutex;
+	mutex m_gameSndMutex;
 	u8 m_bnrSndVol;
 	
 	bool m_music_ismp3;
 	u32 m_music_fileSize;
-	vector<string> music_files;
-	vector<string>::iterator current_music;
+	std::vector<std::string> music_files;
+	std::vector<std::string>::iterator current_music;
 private:
 	enum WBFS_OP { WO_ADD_GAME, WO_REMOVE_GAME, WO_FORMAT };
 	typedef std::pair<std::string, u32> FontDesc;

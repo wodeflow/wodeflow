@@ -46,6 +46,8 @@ void gsenddata(const u8 *data, int length, const char *filename)
 		usb_sendbuffer_safe(1, filename, strlen(filename));
 }
 
+
+
 char ascii(char s) {
   if(s < 0x20) return '.';
   if(s > 0x7E) return '.';

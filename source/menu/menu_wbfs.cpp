@@ -1,4 +1,3 @@
-
 #include "menu.hpp"
 #include "loader/wbfs.h"
 
@@ -6,13 +5,6 @@
 
 using namespace std;
 
-class LockMutex
-{
-	mutex_t &m_mutex;
-public:
-	LockMutex(mutex_t &m) : m_mutex(m) { LWP_MutexLock(m_mutex); }
-	~LockMutex(void) { LWP_MutexUnlock(m_mutex); }
-};
 
 void CMenu::_hideWBFS(bool instant)
 {
@@ -211,7 +203,7 @@ bool CMenu::_wbfsOp(CMenu::WBFS_OP op)
 		// 
 		if (m_thrdMessageAdded)
 		{
-			LockMutex lock(m_mutex);
+			lock_guard<mutex> lock(m_mutex);
 			m_thrdMessageAdded = false;
 			if (!m_thrdMessage.empty())
 				m_btnMgr.setText(m_wbfsLblDialog, m_thrdMessage);

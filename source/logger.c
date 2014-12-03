@@ -9,10 +9,11 @@
 void log_printf( const char *str, ... )
 {
 	FILE * log_fd;
+	int fileopen_retry = 10;
 	log_fd = fopen("sd:/log.txt", "a+");
 	
 	// Opening the file failed... lets try again..
-	if (!log_fd)
+	while (!log_fd && fileopen_retry-- > 0)
 		log_fd = fopen("sd:/log.txt", "a+");
 
     if (log_fd == NULL)
@@ -24,7 +25,6 @@ void log_printf( const char *str, ... )
 	vfprintf(log_fd, str, ap );
 	
 	va_end(ap);
-	fflush(log_fd);
 	fclose(log_fd);
 }
 

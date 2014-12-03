@@ -66,17 +66,20 @@ CMenu::CMenu(CVideo &vid) :
 	m_locked = false;
 	m_favorites = false;
 	m_networkInit = false;
-	m_mutex = 0;
 	m_letter = 0;
 	m_noHBC = false;
 	m_gameSoundThread = 0;
-	m_gameSndMutex = 0;
 	m_numCFVersions = 0;
 	m_bgCrossFade = 0;
 	m_bnrSndVol = 0;
 	m_padLeftDelay = 0;
 	m_padRightDelay = 0;
 	m_gameSettingsPage = 0;
+}
+
+CMenu::~CMenu(void)
+{
+	cleanup();
 }
 
 void CMenu::init(bool fromHBC)
@@ -192,8 +195,6 @@ void CMenu::init(bool fromHBC)
 	m_vid.set2DViewport(m_cfg.getInt(" GENERAL", "tv_width", 640), m_cfg.getInt(" GENERAL", "tv_height", 480),
 		m_cfg.getInt(" GENERAL", "tv_x", 0), m_cfg.getInt(" GENERAL", "tv_y", 0));
 	Sys_ExitToWiiMenu(m_noHBC || m_cfg.getBool(" GENERAL", "exit_to_wii_menu", false));
-	LWP_MutexInit(&m_mutex, 0);
-	LWP_MutexInit(&m_gameSndMutex, 0);
 	soundInit();
 	m_cf.setSoundVolume(m_cfg.getInt(" GENERAL", "sound_volume_coverflow", 255));
 	m_btnMgr.setSoundVolume(m_cfg.getInt(" GENERAL", "sound_volume_gui", 255));
@@ -210,10 +211,6 @@ void CMenu::cleanup(void)
 	_stopSounds();
 	soundDeinit();
 	_waitForGameSoundExtract();
-	LWP_MutexDestroy(m_mutex);
-	m_mutex = 0;
-	LWP_MutexDestroy(m_gameSndMutex);
-	m_gameSndMutex = 0;
 }
 
 void CMenu::_setAA(int aa)
@@ -914,7 +911,8 @@ void CMenu::_mainLoopCommon(const WPADData *wd, bool withCF, bool blockReboot, b
 			m_cfg.save();
 		Sys_Test();
 	}
-	LWP_MutexLock(m_gameSndMutex);
+
+	m_gameSndMutex.lock();
 	if (!!m_gameSoundTmp.data)
 	{
 		m_gameSound.stop();
@@ -922,7 +920,8 @@ void CMenu::_mainLoopCommon(const WPADData *wd, bool withCF, bool blockReboot, b
 		m_gameSoundTmp.data.release();
 		m_gameSound.play(m_bnrSndVol);
 	}
-	LWP_MutexUnlock(m_gameSndMutex);
+	m_gameSndMutex.unlock();
+
 	if (withCF && m_gameSoundThread == 0)
 		m_cf.startPicLoader();
 	_loopMusic();

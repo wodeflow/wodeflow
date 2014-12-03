@@ -19,8 +19,6 @@ extern "C" {
 	#define InitGecko()      false
 #endif /* NO_DEBUG */
 
-
-
 #ifdef __cplusplus
 }
 #endif
