@@ -551,15 +551,21 @@ int GetISOInfo(unsigned long partition_idx, unsigned long iso_idx, ISOInfo_t * I
 	//unsigned long  iso_region;
 	//char header[8];
 
-	//TYPE_GC
+	/* every odd iso number becomes a wii title... */
+	if (iso_idx & 1)
+		ISOInfo->iso_type = TYPE_WII;
+	else
+		ISOInfo->iso_type = TYPE_GC;
 
-	//gprintf("GetISOInfo\n");
-
-	ISOInfo->iso_type = TYPE_WII;
 	ISOInfo->iso_region = 0; // I dono if this really matters...
 
-	//memcpy(ISOInfo->name,"test\0",5);
-	sprintf(ISOInfo->name, "par: %u | ISO: %u", partition_idx, iso_idx);
+	sprintf(ISOInfo->header, "%04X%04X", partition_idx, iso_idx);
+
+	if (iso_idx & 1)
+		sprintf(ISOInfo->name, "WII|par: %u | ISO: %u", partition_idx, iso_idx);
+	else
+		sprintf(ISOInfo->name, "GC|par: %u | ISO: %u", partition_idx, iso_idx);
+
 	return 0;
 }
 
