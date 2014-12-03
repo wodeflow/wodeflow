@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <string.h>
 
-#include "threading/mutex.h"
+#include "threading/mutex.hpp"
 
 void CMEM2Alloc::init(unsigned int size)
 {

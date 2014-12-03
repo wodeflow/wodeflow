@@ -16,7 +16,7 @@
 #include "sound.hpp"
 #include "wode.h"
 
-#include "threading\mutex.h"
+#include "threading\mutex.hpp"
 
 class CCoverFlow
 {

@@ -1,7 +1,7 @@
 #include "objalloc.hpp"
 #include "string.h"
 
-#include "threading/mutex.h"
+#include "threading/mutex.hpp"
 
 
 void *CObjAlloc::allocate(u32 s)

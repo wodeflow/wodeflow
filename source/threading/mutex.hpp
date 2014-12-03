@@ -3,6 +3,10 @@
 
 #include <ogc/mutex.h>
 
+/*!
+ * hmmm it seems that devkitpro doesn't have all the c++11 features enabled. It seems to miss at least
+ * std::mutex and std::thread.
+ */
 class mutex
 {
 public:

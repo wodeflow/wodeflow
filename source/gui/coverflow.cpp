@@ -12,7 +12,7 @@
 #include "pngu.h"
 #include "boxmesh.hpp"
 #include "wstringEx.hpp"
-#include "threading/mutex.h"
+#include "threading/mutex.hpp"
 
 #include "gecko.h"
 

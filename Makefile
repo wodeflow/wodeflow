@@ -26,6 +26,7 @@ SOURCES		:=	source \
 				source/menu \
 				source/music \
 				source/network \
+				source/threading \
 				source/libs/libfat \
 				source/libs/libwbfs
 
