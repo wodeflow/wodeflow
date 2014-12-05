@@ -498,49 +498,77 @@ int GetTotalISOs( void )
 
 int InitDVD()
 {
-	gprintf("InitDVD\n");
+	//gprintf("InitDVD\n");
 	return 0;
 }
 
 int OpenWode(void)
 {
-	gprintf("OpenWode\n");
+	//gprintf("OpenWode\n");
 	return 2;
 }
 
 int CloseWode(void)
 {
-	gprintf("CloseWode\n");
+	//gprintf("CloseWode\n");
 	return 0;
 }
 
+#define PARTITION_COUNT 1
+#define ISO_COUNT 20
+
 unsigned long GetNumPartitions(void)
 {
-	gprintf("GetNumPartitions\n");
-	return 2;
+	//gprintf("GetNumPartitions\n");
+	return PARTITION_COUNT;
 }
 
 unsigned long GetNumISOs(unsigned long partition_idx)
 {
-	gprintf("GetNumISOs\n");
-	return 10;
+	//gprintf("GetNumISOs\n");
+	return ISO_COUNT;
 }
 
 int GetPartitionInfo(unsigned long partition_idx, PartitionInfo_t* PartitionInfo)
 {
-	gprintf("GetPartitionInfo\n");
-	// add more info
+	//gprintf("GetPartitionInfo\n");
 
-	//memcpy(PartitionInfo->name,dvdbuffer,64);
-	//memcpy(PartitionInfo->name,"dev",64);
 	sprintf(PartitionInfo->name, "dev%u", partition_idx);
 	PartitionInfo->NumISOs = 10;
-	//PartitionInfo->partition_type 	= *((unsigned long*)&dvdbuffer[68]);
 	PartitionInfo->partition_mode = pm_read_write;
-
 
 	return 0;
 }
+
+/* random titles... for testing purposes */
+static const char* emulation_titles[] = {
+	"SMNE31",
+	"R5UE41",
+	"R5VE41",
+	"R5WEA4",
+	"R6LEWR",
+	"R6ME5Z",
+	"R6NE41",
+	"R6OE78",
+	"R6QE69",
+	"R6REJH",
+	"R6TEA4",
+	"R6VE4Z",
+	"R6WE68",
+	"R6XE69",
+	"R6YEXS",
+	"R72E5G",
+	"R74E20",
+	"R75E20",
+	"R76E54",
+	"D2SE18",
+	"R4QE01",
+	"R4RE69",
+	"R5MJAF",
+	"R5TJ13", // japanese title
+};
+
+static const int emulation_titles_len = sizeof(emulation_titles) / sizeof(emulation_titles[0]);
 
 int GetISOInfo(unsigned long partition_idx, unsigned long iso_idx, ISOInfo_t * ISOInfo)
 {
@@ -559,7 +587,8 @@ int GetISOInfo(unsigned long partition_idx, unsigned long iso_idx, ISOInfo_t * I
 
 	ISOInfo->iso_region = 0; // I dono if this really matters...
 
-	sprintf(ISOInfo->header, "%04X%04X", partition_idx, iso_idx);
+	memset(ISOInfo->header, 0, sizeof(ISOInfo->header));
+	memcpy(ISOInfo->header, emulation_titles[iso_idx % emulation_titles_len], 6);
 
 	if (iso_idx & 1)
 		sprintf(ISOInfo->name, "WII|par: %u | ISO: %u", partition_idx, iso_idx);
@@ -611,7 +640,7 @@ int GetVersions(device_versions * versions)
 
 int GetTotalISOs(void)
 {
-	return 10;
+	return ISO_COUNT;
 }
 
 unsigned long GetSelectedISO(void)
