@@ -4,9 +4,7 @@
 #ifndef __MEM2ALLOC_HPP
 #define __MEM2ALLOC_HPP
 
-#include <ogc/mutex.h>
-
-
+#include "threading/mutex.hpp"
 
 class CMEM2Alloc
 {
@@ -23,7 +21,7 @@ public:
 	void *getEndAddress(void) const { return m_endAddress; }
 	void info(void *&address, unsigned int &size) const { address = m_baseAddress; size = (const char *)m_endAddress - (const char *)m_baseAddress; }
 	// 
-	CMEM2Alloc(void) : m_baseAddress(0), m_endAddress(0), m_first(0) { }
+	CMEM2Alloc(void);
 private:
 	struct SBlock
 	{
@@ -35,9 +33,10 @@ private:
 	SBlock *m_baseAddress;
 	SBlock *m_endAddress;
 	SBlock *m_first;
-	mutex_t m_mutex;
+	mutex m_mutex;
 private:
-	CMEM2Alloc(const CMEM2Alloc &);
+	CMEM2Alloc(const CMEM2Alloc&) = delete;
+	CMEM2Alloc& operator=(const CMEM2Alloc&) = delete;
 };
 
 #endif // !defined(__MEM2ALLOC_HPP)
