@@ -2435,15 +2435,14 @@ int CCoverFlow::_picLoader(CCoverFlow *cf)
 			cf->_dropHQLOD(cf->m_hqCover);
 			cf->m_hqCover = -1;
 		}
+		cf->m_mutex.lock();
 		for (u32 j = numItems - 1; j > lastVisible; --j)
 		{
 			i = loopNum((j & 1) != 0 ? firstItem - (j + 1) / 2 : firstItem + j / 2, numItems);
-			
-			cf->m_mutex.lock();
 			cf->m_items[i].texture.data.release();
 			cf->m_items[i].state = CCoverFlow::STATE_Loading;
-			cf->m_mutex.unlock();
 		}
+		cf->m_mutex.unlock();
 		for (u32 j = 0; j <= lastVisible; ++j)
 		{
 			if (cf->m_waitingToClear || cf->m_moved || ret == CCoverFlow::CL_NOMEM)
@@ -2462,6 +2461,9 @@ int CCoverFlow::_picLoader(CCoverFlow *cf)
 		}
 		if (ret == CCoverFlow::CL_NOMEM && bufferSize > 3)
 			bufferSize -= 2;
+
+		// sleep a bit so that the picture loader thread isn't raping the cpu
+		usleep(10 * 1000);
 	}
 	cf->m_loadingPic = false;
 	return 0;
