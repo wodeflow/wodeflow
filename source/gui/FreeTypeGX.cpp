@@ -34,6 +34,9 @@
 FreeTypeGX::FreeTypeGX(uint8_t textureFormat, uint8_t positionFormat) {
 	FT_Init_FreeType(&this->ftLibrary);
 
+	// make sure our fontData lookup table contains only nullptr's
+	memset(font_data_, 0, sizeof(font_data_));
+
 	this->textureFormat = textureFormat;
 	this->positionFormat = positionFormat;
 	xScale = 1.f;
@@ -116,11 +119,15 @@ uint16_t FreeTypeGX::loadFont(const uint8_t* fontBuffer, FT_Long bufferSize, FT_
  * This routine clears all members of the font map structure and frees all allocated memory back to the system.
  */
 void FreeTypeGX::unloadFont() {
-	for( std::map<wchar_t, ftgxCharData>::iterator i = this->fontData.begin(); i != this->fontData.end(); i++) {
-		MEM2_free(i->second.glyphDataTexture);
+	for (int i = 0; i < 0xFFFF; ++i)
+	{
+		if (font_data_[i] != nullptr)
+			MEM2_free(font_data_[i]->glyphDataTexture);
+
+		free(font_data_[i]);
+		font_data_[i] = nullptr;
 	}
-	
-	this->fontData.clear();
+
 //	if (this->ftFace != 0)
 //	{
 //		FT_Done_Face(this->ftFace);
@@ -155,8 +162,11 @@ uint16_t FreeTypeGX::adjustTextureWidth(uint16_t textureWidth, uint8_t textureFo
 			alignment = 4;
 			break;
 	}
-	return textureWidth % alignment == 0 ? textureWidth : alignment + textureWidth - (textureWidth % alignment);
 
+	if (textureWidth % alignment == 0)
+		return textureWidth;
+	else
+		return alignment + textureWidth - (textureWidth % alignment);
 }
 
 /**
@@ -214,23 +224,26 @@ ftgxCharData *FreeTypeGX::cacheGlyphData(wchar_t charCode) {
 			textureWidth = adjustTextureWidth(glyphBitmap->width, this->textureFormat);
 			textureHeight = adjustTextureHeight(glyphBitmap->rows, this->textureFormat);
 
-			this->fontData[charCode] = (ftgxCharData){
-				this->ftSlot->advance.x >> 6,
-				gIndex,
-				textureWidth,
-				textureHeight,
-				this->ftSlot->bitmap_top,
-				this->ftSlot->bitmap_top,
-				textureHeight - this->ftSlot->bitmap_top,
-				NULL
+			ftgxCharData * char_data = (ftgxCharData*)malloc(sizeof(ftgxCharData));
+			if (!char_data)
+				return nullptr;
+			*char_data = (ftgxCharData){
+					this->ftSlot->advance.x >> 6,
+					gIndex,
+					textureWidth,
+					textureHeight,
+					this->ftSlot->bitmap_top,
+					this->ftSlot->bitmap_top,
+					textureHeight - this->ftSlot->bitmap_top,
+					nullptr
 			};
-			this->loadGlyphData(glyphBitmap, &this->fontData[charCode]);
-			
-			return &this->fontData[charCode];
+			font_data_[charCode] = char_data;
+			this->loadGlyphData(glyphBitmap, this->font_data_[charCode]);
+			return font_data_[charCode];
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 /**
@@ -378,25 +391,31 @@ uint16_t FreeTypeGX::drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor col
 		y_offset = this->getStyleOffsetHeight(this->getOffset(text), textStyle);
 	}
 	
-	for (uint16_t i = 0; i < strLength; i++) {
-		
-		ftgxCharData* glyphData = NULL;
-		if( this->fontData.find(text[i]) != this->fontData.end() ) {
-			glyphData = &this->fontData[text[i]];
-		}
-		else {
-			glyphData = this->cacheGlyphData(text[i]);
-		}
-		
-		if(glyphData != NULL) {
+	for (uint32_t i = 0; i < strLength; ++i) {
+
+		ftgxCharData* glyphData = nullptr;
+
+		if (font_data_[text[i]] != nullptr)
+			glyphData = font_data_[text[i]];
+		else
+			glyphData = cacheGlyphData(text[i]);
+
+		if(glyphData != nullptr) {
 			
 			if(this->ftKerningEnabled && i) {
-				FT_Get_Kerning( this->ftFace, this->fontData[text[i - 1]].glyphIndex, glyphData->glyphIndex, FT_KERNING_DEFAULT, &pairDelta );
+				FT_Get_Kerning( this->ftFace, font_data_[text[i - 1]]->glyphIndex, glyphData->glyphIndex, FT_KERNING_DEFAULT, &pairDelta );
 				x_pos += pairDelta.x >> 6;
 			}
 
 			GX_InitTexObj(&glyphTexture, glyphData->glyphDataTexture, glyphData->textureWidth, glyphData->textureHeight, this->textureFormat, GX_CLAMP, GX_CLAMP, GX_FALSE);
-			this->copyTextureToFramebuffer(&glyphTexture, this->positionFormat, glyphData->textureWidth, glyphData->textureHeight, x_pos - x_offset, y - glyphData->renderOffsetY - y_offset, color);
+			this->copyTextureToFramebuffer(
+				&glyphTexture,
+				this->positionFormat,
+				glyphData->textureWidth,
+				glyphData->textureHeight,
+				x_pos - x_offset,
+				y - glyphData->renderOffsetY - y_offset,
+				color);
 
 			x_pos += glyphData->glyphAdvanceX;
 			printed++;
@@ -468,27 +487,26 @@ uint16_t FreeTypeGX::getWidth(wchar_t *text) {
 	uint16_t strLength = wcslen(text);
 	uint16_t strWidth = 0;
 	FT_Vector pairDelta;
-	
+
 	for (uint16_t i = 0; i < strLength; i++) {
-		
-		ftgxCharData* glyphData = NULL;
-		if( this->fontData.find(text[i]) != this->fontData.end() ) {
-			glyphData = &this->fontData[text[i]];
-		}
-		else {
-			glyphData = this->cacheGlyphData(text[i]);
-		}
-		
-		if(glyphData != NULL) {
+
+		ftgxCharData* glyphData = nullptr;
+
+		if (font_data_[text[i]] != nullptr)
+			glyphData = font_data_[text[i]];
+		else
+			glyphData = cacheGlyphData(text[i]);
+
+		if(glyphData != nullptr) {
 			if(this->ftKerningEnabled && (i > 0)) {
-				FT_Get_Kerning( this->ftFace, this->fontData[text[i - 1]].glyphIndex, glyphData->glyphIndex, FT_KERNING_DEFAULT, &pairDelta );
+				FT_Get_Kerning( this->ftFace, this->font_data_[text[i - 1]]->glyphIndex, glyphData->glyphIndex, FT_KERNING_DEFAULT, &pairDelta );
 				strWidth += pairDelta.x >> 6;
 			}
 
 			strWidth += glyphData->glyphAdvanceX;
 		}
 	}
-	
+
 	return strWidth;
 }
 
@@ -536,17 +554,18 @@ ftgxDataOffset FreeTypeGX::getOffset(wchar_t *text) {
 	uint16_t strLength = wcslen(text);
 	uint16_t strMax = 0, strMin = 0;
 	
-	for (uint16_t i = 0; i < strLength; i++) {
+	for (uint16_t i = 0; i < strLength; ++i) {
 		
-		ftgxCharData* glyphData = NULL;
-		if( this->fontData.find(text[i]) != this->fontData.end() ) {
-			glyphData = &this->fontData[text[i]];
-		}
-		else {
-			glyphData = this->cacheGlyphData(text[i]);
-		}
+		ftgxCharData* glyphData = nullptr;
+
+		if (font_data_[text[i]] != nullptr)
+			glyphData = font_data_[text[i]];
+		else
+			glyphData = cacheGlyphData(text[i]);
+
 		
-		if(glyphData != NULL) {
+		if(glyphData != nullptr) {
+
 			strMax = glyphData->renderOffsetMax > strMax ? glyphData->renderOffsetMax : strMax;
 			strMin = glyphData->renderOffsetMin > strMin ? glyphData->renderOffsetMin : strMin;
 		}
