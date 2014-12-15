@@ -13,6 +13,8 @@
 #include "boxmesh.hpp"
 #include "wstringEx.hpp"
 #include "threading/mutex.hpp"
+//#include "threading/thread.hpp" // not done yet
+#include "logger.h"
 
 #include "gecko.h"
 
@@ -72,6 +74,7 @@ static inline wchar_t upperCaseWChar(wchar_t c)
 bool CCoverFlow::CItem::operator<(const CCoverFlow::CItem &i) const
 {
 	u32 s = min(title.size(), i.title.size());
+
 	for (u32 k = 0; k < s; ++k)
 		if (upperCaseWChar(i.title[k]) < upperCaseWChar(title[k]))
 			return false;
@@ -79,7 +82,6 @@ bool CCoverFlow::CItem::operator<(const CCoverFlow::CItem &i) const
 			return true;
 	return false;
 }
-
 
 CCoverFlow::CCoverFlow(void)
 {
@@ -170,13 +172,15 @@ CCoverFlow::CCoverFlow(void)
 	m_mirrorAlpha = 0.2f;
 	m_txtMirrorAlpha = 0.2f;
 	m_delay = 0;
-	m_minDelay = 5;
+
+	m_minDelay = 5; // is the delay between cover swaps
+
 	m_jump = 0;
 	m_loadingPic = false;
 	m_waitingToClear = false;
 	m_moved = false;
 	m_selected = false;
-	m_tickCount = 0;
+	m_tickCount = 0.f;
 	m_hqCover = -1;
 	m_blurRadius = 3;
 	m_blurFactor = 1.f;
@@ -544,7 +548,7 @@ void CCoverFlow::stopSound(void)
 
 void CCoverFlow::applySettings(void)
 {
-	lock_guard<mutex> lock(m_mutex);
+	//lock_guard<mutex> lock(m_items_lock);
 
 	if (m_covers.empty())
 		return;
@@ -556,12 +560,15 @@ void CCoverFlow::stopPicLoader(bool empty)
 	m_waitingToClear = true;
 	while (m_loadingPic)
 		usleep(1000);
+	
 	if (empty)
-		for (u32 i = 0; i < m_items.size(); ++i)
+	{
+		for (std::size_t i = 0; i < m_items.size(); ++i)
 		{
 			m_items[i].texture.data.release();
 			m_items[i].state = CCoverFlow::STATE_Loading;
 		}
+	}
 }
 
 void CCoverFlow::startPicLoader(void)
@@ -573,6 +580,7 @@ void CCoverFlow::startPicLoader(void)
 		m_moved = true;
 		m_loadingPic = true;
 		m_waitingToClear = false;
+
 		LWP_CreateThread(&thread, (void *(*)(void *))CCoverFlow::_picLoader, (void *)this, 0, 8192, 40);
 	}
 }
@@ -849,6 +857,7 @@ void CCoverFlow::drawEffect(void)
 		float x = 0.f;
 		float y = 0.f;
 
+		//prepare_draw();
 		GX_SetNumTevStages(1);
 		GX_SetNumChans(0);
 		GX_ClearVtxDesc();
@@ -867,19 +876,19 @@ void CCoverFlow::drawEffect(void)
 		GX_SetAlphaUpdate(GX_FALSE);
 		GX_SetCullMode(GX_CULL_NONE);
 		GX_SetZMode(GX_ENABLE, GX_LEQUAL, GX_FALSE);
+
 		guMtxIdentity(modelViewMtx);
 		GX_LoadPosMtxImm(modelViewMtx, GX_PNMTX0);
 		GX_InitTexObj(&texObj, m_effectTex.data.get(), m_effectTex.width, m_effectTex.height, m_effectTex.format, GX_CLAMP, GX_CLAMP, GX_FALSE);
 		GX_LoadTexObj(&texObj, GX_TEXMAP0);
+		
 		GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-		GX_Position3f32(x, y, -999.f);
-		GX_TexCoord2f32(0.f, 0.f);
-		GX_Position3f32(x + w, y, -999.f);
-		GX_TexCoord2f32(1.f, 0.f);
-		GX_Position3f32(x + w, y + h, -999.f);
-		GX_TexCoord2f32(1.f, 1.f);
-		GX_Position3f32(x, y + h, -999.f);
-		GX_TexCoord2f32(0.f, 1.f);
+		
+		/*quad + uv mapping*/
+		GX_Position3f32(x, y, -999.f);				GX_TexCoord2f32(0.f, 0.f);
+		GX_Position3f32(x + w, y, -999.f);			GX_TexCoord2f32(1.f, 0.f);
+		GX_Position3f32(x + w, y + h, -999.f);		GX_TexCoord2f32(1.f, 1.f);
+		GX_Position3f32(x, y + h, -999.f);			GX_TexCoord2f32(0.f, 1.f);
 		GX_End();
 	}
 	if (!m_mirrorBlur)
@@ -893,16 +902,16 @@ void CCoverFlow::draw(void)
 
 void CCoverFlow::drawText(bool withRectangle)
 {
-	lock_guard<mutex> lock(m_mutex);
-	
 	Vector3D up(0.f, 1.f, 0.f);
+
+	//lock_guard<mutex> lock(m_items_lock);
+
 	Vector3D dir(m_cameraAim);
 	Vector3D pos(m_cameraPos);
 
-	if (m_covers.empty())
-		return;
-	if (m_fontColor.a == 0)
-		return;
+	if (m_covers.empty())		return;
+	if (m_fontColor.a == 0)		return;
+
 	pos += _cameraMoves();
 	// Camera
 	GX_LoadProjectionMtx(m_projMtx, GX_PERSPECTIVE);
@@ -914,8 +923,16 @@ void CCoverFlow::drawText(bool withRectangle)
 	GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
 	for (u32 i = 0; i < m_range; ++i)
 	{
-		_drawTitle(loopNum((i & 1) != 0 ? m_range / 2 - (i + 1) / 2 : m_range / 2 + i / 2, m_range), true, withRectangle);
-		_drawTitle(loopNum((i & 1) != 0 ? m_range / 2 - (i + 1) / 2 : m_range / 2 + i / 2, m_range), false, withRectangle);
+		int index;
+		if ((i & 0) != 0)
+			index = (m_range / 2) - ((i + 1) / 2);
+		else
+			index = (m_range / 2) + (i / 2);
+		
+		index = loopNum(index, m_range);
+
+		_drawTitle(index, true, withRectangle);
+		_drawTitle(index, false, withRectangle);
 	}
 }
 
@@ -926,15 +943,17 @@ inline int innerToOuter(int i, int range)
 
 void CCoverFlow::_draw(DrawMode dm, bool mirror, bool blend)
 {
-	lock_guard<mutex> lock(m_mutex);
+	//lock_guard<mutex> lock(m_items_lock);
 	Vector3D up(0.f, 1.f, 0.f);
 	Vector3D dir(m_cameraAim);
 	Vector3D pos(m_cameraPos);
 
 	if (mirror && m_mirrorAlpha <= 0.f)
 		return;
+
 	if (m_covers.empty())
 		return;
+
 	pos += _cameraMoves();
 	// GX setup
 	GX_ClearVtxDesc();
@@ -959,6 +978,7 @@ void CCoverFlow::_draw(DrawMode dm, bool mirror, bool blend)
 		GX_SetNumChans(1);
 		GX_SetNumTexGens(0);
 		GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+		
 		GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
 		GX_SetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, GX_CC_KONST);
 		GX_SetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, GX_CA_KONST);
@@ -1013,19 +1033,22 @@ void CCoverFlow::_draw(DrawMode dm, bool mirror, bool blend)
 			_drawCover(y, mirror, dm);
 			_drawCover((m_columns - 1) * m_rows + y, mirror, dm);
 		}
+		
 		if (m_rows >= 3)
+		{
 			for (u32 x = 1; x < m_columns - 1; ++x)
 			{
 				_drawCover(x * m_rows, mirror, dm);
 				_drawCover(x * m_rows + m_rows - 1, mirror, dm);
 			}
+		}
 	}
 }
 
 Vector3D CCoverFlow::_cameraMoves(void)
 {
 	SLayout &lo = m_selected ? m_loSelected : m_loNormal;
-	float tick = (float)m_tickCount * 0.005f;
+	float tick = m_tickCount * 0.005f;
 	return Vector3D(cos(tick * lo.cameraOscSpeed.x) * lo.cameraOscAmp.x,
 		cos(tick * lo.cameraOscSpeed.y) * lo.cameraOscAmp.y,
 		cos(tick * lo.cameraOscSpeed.z) * lo.cameraOscAmp.z);
@@ -1034,7 +1057,7 @@ Vector3D CCoverFlow::_cameraMoves(void)
 Vector3D CCoverFlow::_coverMovesA(void)
 {
 	SLayout &lo = m_selected ? m_loSelected : m_loNormal;
-	float tick = (float)m_tickCount * 0.005f;
+	float tick = m_tickCount * 0.005f;
 	return Vector3D(cos(tick * lo.coverOscASpeed.x) * lo.coverOscAAmp.x,
 		sin(tick * lo.coverOscASpeed.y) * lo.coverOscAAmp.y,
 		cos(tick * lo.coverOscASpeed.z) * lo.coverOscAAmp.z);
@@ -1056,9 +1079,16 @@ void CCoverFlow::_drawTitle(int i, bool mirror, bool rectangle)
 	Vector3D rotAxis(0.f, 1.f, 0.f);
 	CColor color(m_fontColor);
 
-	if (m_covers[i].txtColor == 0)
+	CCover & cover = m_covers[i];
+
+	if (cover.txtColor == 0)
 		return;
-	color.a = mirror ? (u8)((float)m_covers[i].txtColor * m_txtMirrorAlpha) : m_covers[i].txtColor;
+	
+	if (mirror)
+		color.a = (u8)((float)cover.txtColor * m_txtMirrorAlpha);
+	else
+		color.a = cover.txtColor;
+
 	if (rectangle && !mirror)
 	{
 		// GX setup
@@ -1079,42 +1109,44 @@ void CCoverFlow::_drawTitle(int i, bool mirror, bool rectangle)
 		// 
 		Mtx rotMtx;
 		guMtxIdentity(modelMtx);
+		
 		guMtxScaleApply(modelMtx, modelMtx, 0.005f, 0.005f, 0.005f);
-		guMtxRotDeg(rotMtx, 'Y', m_covers[i].txtAngle);
+		guMtxRotDeg(rotMtx, 'Y', cover.txtAngle);
 		guMtxConcat(rotMtx, modelMtx, modelMtx);
-		guMtxTransApply(modelMtx, modelMtx, m_covers[i].txtPos.x, mirror ? -m_covers[i].txtPos.y : m_covers[i].txtPos.y, m_covers[i].txtPos.z);
+		guMtxTransApply(modelMtx, modelMtx, cover.txtPos.x, mirror ? -cover.txtPos.y : cover.txtPos.y, cover.txtPos.z);
 		guMtxConcat(m_viewMtx, modelMtx, modelViewMtx);
 		GX_LoadPosMtxImm(modelViewMtx, GX_PNMTX0);
+		
 		const SLayout &lo = m_selected ? m_loSelected : m_loNormal;
+
 		u16 s = (u32)i == m_range / 2 ? lo.txtCenterStyle : lo.txtSideStyle;
 		float x;
 		float y;
 		float w = (u32)i == m_range / 2 ? lo.txtCenterWidth : lo.txtSideWidth;
 		float h = m_font.lineSpacing;
+	
 		if ((s & FTGX_JUSTIFY_CENTER) != 0)
 			x = -w * 0.5f;
 		else if ((s & FTGX_JUSTIFY_RIGHT) != 0)
 			x = -w;
 		else
 			x = 0.f;
+		
 		if ((s & FTGX_ALIGN_MIDDLE) != 0)
 			y = -h * 0.5f;
 		else if ((s & FTGX_ALIGN_TOP) != 0)
 			y = -h;
 		else
 			y = 0.f;
+
 		GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-		GX_Position3f32(x, y, 0.f);
-		GX_Color4u8(color.r, color.g, color.b, color.a / 2);
-		GX_Position3f32(x + w, y, 0.f);
-		GX_Color4u8(color.r, color.g, color.b, color.a / 2);
-		GX_Position3f32(x + w, y + h, 0.f);
-		GX_Color4u8(color.r, color.g, color.b, color.a / 2);
-		GX_Position3f32(x, y + h, 0.f);
-		GX_Color4u8(color.r, color.g, color.b, color.a / 2);
+		GX_Position3f32(x, y, 0.f);			GX_Color4u8(color.r, color.g, color.b, color.a / 2);
+		GX_Position3f32(x + w, y, 0.f);		GX_Color4u8(color.r, color.g, color.b, color.a / 2);
+		GX_Position3f32(x + w, y + h, 0.f);	GX_Color4u8(color.r, color.g, color.b, color.a / 2);
+		GX_Position3f32(x, y + h, 0.f);		GX_Color4u8(color.r, color.g, color.b, color.a / 2);
 		GX_End();
 	}
-	m_covers[i].title.setColor(color);
+	cover.title.setColor(color);
 	m_font.font->reset();
     m_font.font->setScale(0.005f, mirror ? 0.005f : -0.005f);
 
@@ -1133,11 +1165,11 @@ void CCoverFlow::_drawTitle(int i, bool mirror, bool rectangle)
 	GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
 	// 
 	guMtxIdentity(modelMtx);
-	guMtxRotAxisDeg(modelMtx, &rotAxis, m_covers[i].txtAngle);
-	guMtxTransApply(modelMtx, modelMtx, m_covers[i].txtPos.x, mirror ? -m_covers[i].txtPos.y : m_covers[i].txtPos.y, m_covers[i].txtPos.z);
+	guMtxRotAxisDeg(modelMtx, &rotAxis, cover.txtAngle);
+	guMtxTransApply(modelMtx, modelMtx, cover.txtPos.x, mirror ? -cover.txtPos.y : cover.txtPos.y, cover.txtPos.z);
 	guMtxConcat(m_viewMtx, modelMtx, modelViewMtx);
 	GX_LoadPosMtxImm(modelViewMtx, GX_PNMTX0);
-	m_covers[i].title.draw();
+	cover.title.draw();
 }
 
 void CCoverFlow::_drawCover(int i, bool mirror, CCoverFlow::DrawMode dm)
@@ -1150,6 +1182,7 @@ void CCoverFlow::_drawCover(int i, bool mirror, CCoverFlow::DrawMode dm)
 
 	if (m_covers[i].color.a == 0 || (dm == CCoverFlow::CFDR_SHADOW && m_covers[i].shadowColor.a == 0))
 		return;
+
 	if (dm == CCoverFlow::CFDR_STENCIL && (i > 0xFF || _invisibleCover(i / m_rows, i % m_rows)))
 		return;
 	if ((u32)i == m_range / 2)
@@ -1223,17 +1256,26 @@ void CCoverFlow::_drawCoverFlat(int i, bool mirror, CCoverFlow::DrawMode dm)
 		GX_LoadTexObj(&texObj, GX_TEXMAP0);
 	}
 	GX_Begin(GX_QUADS, GX_VTXFMT0, g_flatCoverMeshSize);
-	for (u32 j = 0; j < g_flatCoverMeshSize; ++j)
+
+	if (dm == CCoverFlow::CFDR_NORMAL)
 	{
-		GX_Position3f32(g_flatCoverMesh[j].pos.x, g_flatCoverMesh[j].pos.y, g_flatCoverMesh[j].pos.z);
-		if (dm == CCoverFlow::CFDR_NORMAL)
+		for (u32 j = 0; j < g_flatCoverMeshSize; ++j)
 		{
+			GX_Position3f32(g_flatCoverMesh[j].pos.x, g_flatCoverMesh[j].pos.y, g_flatCoverMesh[j].pos.z);
 			if (boxTex)
 				GX_TexCoord2f32(g_flatCoverBoxTex[j].x, g_flatCoverBoxTex[j].y);
 			else
 				GX_TexCoord2f32(g_flatCoverMesh[j].texCoord.x, g_flatCoverMesh[j].texCoord.y);
 		}
 	}
+	else
+	{
+		for (u32 j = 0; j < g_flatCoverMeshSize; ++j)
+		{
+			GX_Position3f32(g_flatCoverMesh[j].pos.x, g_flatCoverMesh[j].pos.y, g_flatCoverMesh[j].pos.z);
+		}
+	}
+	
 	GX_End();
 }
 
@@ -1288,14 +1330,25 @@ void CCoverFlow::_drawCoverBox(int i, bool mirror, CCoverFlow::DrawMode dm)
 			GX_TexCoord2f32(g_boxMeshQ[j].texCoord.x, g_boxMeshQ[j].texCoord.y);
 	}
 	GX_End();
+	
 	GX_Begin(GX_TRIANGLES, GX_VTXFMT0, g_boxMeshTSize);
-	for (u32 j = 0; j < g_boxMeshTSize; ++j)
+
+	if (dm == CCoverFlow::CFDR_NORMAL)
 	{
-		GX_Position3f32(g_boxMeshT[j].pos.x, g_boxMeshT[j].pos.y, g_boxMeshT[j].pos.z);
-		if (dm == CCoverFlow::CFDR_NORMAL)
+		for (u32 j = 0; j < g_boxMeshTSize; ++j)
+		{
+			GX_Position3f32(g_boxMeshT[j].pos.x, g_boxMeshT[j].pos.y, g_boxMeshT[j].pos.z);
 			GX_TexCoord2f32(g_boxMeshT[j].texCoord.x, g_boxMeshT[j].texCoord.y);
+		}
+	}	
+	else
+	{
+		for (u32 j = 0; j < g_boxMeshTSize; ++j)
+			GX_Position3f32(g_boxMeshT[j].pos.x, g_boxMeshT[j].pos.y, g_boxMeshT[j].pos.z);
 	}
+
 	GX_End();
+	
 	if (dm == CCoverFlow::CFDR_NORMAL)
 	{
 		STexture *myTex = &tex;
@@ -1306,14 +1359,24 @@ void CCoverFlow::_drawCoverBox(int i, bool mirror, CCoverFlow::DrawMode dm)
 			GX_InitTexObjLOD(&texObj, GX_LIN_MIP_LIN, GX_LINEAR, 0.f, (float)myTex->maxLOD, mirror ? 1.f : m_lodBias, GX_FALSE, m_edgeLOD ? GX_TRUE : GX_FALSE, m_aniso);
 		GX_LoadTexObj(&texObj, GX_TEXMAP0);
 	}
+	
 	GX_Begin(GX_QUADS, GX_VTXFMT0, g_boxBackCoverMeshSize);
-	for (u32 j = 0; j < g_boxBackCoverMeshSize; ++j)
+	if (dm == CCoverFlow::CFDR_NORMAL)
 	{
-		GX_Position3f32(g_boxBackCoverMesh[j].pos.x, g_boxBackCoverMesh[j].pos.y, g_boxBackCoverMesh[j].pos.z);
-		if (dm == CCoverFlow::CFDR_NORMAL)
+		for (u32 j = 0; j < g_boxBackCoverMeshSize; ++j)
+		{
+			GX_Position3f32(g_boxBackCoverMesh[j].pos.x, g_boxBackCoverMesh[j].pos.y, g_boxBackCoverMesh[j].pos.z);
 			GX_TexCoord2f32(g_boxBackCoverMesh[j].texCoord.x, g_boxBackCoverMesh[j].texCoord.y);
+		}
+	}
+	else
+	{
+		for (u32 j = 0; j < g_boxBackCoverMeshSize; ++j)
+			GX_Position3f32(g_boxBackCoverMesh[j].pos.x, g_boxBackCoverMesh[j].pos.y, g_boxBackCoverMesh[j].pos.z);
+
 	}
 	GX_End();
+
 	if (dm == CCoverFlow::CFDR_NORMAL && flatTex)
 	{
 		GX_InitTexObj(&texObj, tex.data.get(), tex.width, tex.height, tex.format, GX_CLAMP, GX_CLAMP, GX_FALSE);
@@ -1321,6 +1384,7 @@ void CCoverFlow::_drawCoverBox(int i, bool mirror, CCoverFlow::DrawMode dm)
 			GX_InitTexObjLOD(&texObj, GX_LIN_MIP_LIN, GX_LINEAR, 0.f, (float)tex.maxLOD, mirror ? 1.f : m_lodBias, GX_FALSE, m_edgeLOD ? GX_TRUE : GX_FALSE, m_aniso);
 		GX_LoadTexObj(&texObj, GX_TEXMAP0);
 	}
+
 	GX_Begin(GX_QUADS, GX_VTXFMT0, g_boxCoverMeshSize);
 	for (u32 j = 0; j < g_boxCoverMeshSize; ++j)
 	{
@@ -1374,6 +1438,7 @@ string CCoverFlow::getNextId(void) const
 {
 	if (m_covers.empty() || m_items.empty())
 		return "";
+
 	return m_items[loopNum(m_covers[m_range / 2].index + m_jump + 1, m_items.size())].id;
 }
 
@@ -1402,12 +1467,14 @@ bool CCoverFlow::select(void)
 {
 	int j;
 	int curPos;
-	lock_guard<mutex> lock(m_mutex);
+	//lock_guard<mutex> lock(m_items_lock);
 
 	if (m_covers.empty() || m_jump != 0)
 		return false;
+	
 	if (m_selected)
 		return true;
+
 	curPos = (int)m_range / 2;
 	if ((u32)m_mouse < m_range && m_mouse != curPos)
 	{
@@ -1432,7 +1499,7 @@ bool CCoverFlow::select(void)
 
 void CCoverFlow::cancel(void)
 {
-	lock_guard<mutex> lock(m_mutex);
+	//lock_guard<mutex> lock(m_items_lock);
 	if (m_covers.empty())
 		return;
 	_unselect();
@@ -1662,7 +1729,8 @@ bool CCoverFlow::start(const char *id)
 				return false;
 	}
 	// Sort items
-	sort(m_items.begin(), m_items.end());
+	std::sort(m_items.begin(), m_items.end());
+
 //	sort(m_items.begin(), m_items.end(), CCoverFlow::_sortByPlayCount);
 	m_covers.clear();
 	m_covers.resize(m_range);
@@ -1677,7 +1745,7 @@ bool CCoverFlow::start(const char *id)
 
 void CCoverFlow::up(void)
 {
-	lock_guard<mutex> lock(m_mutex);
+	//lock_guard<mutex> lock(m_items_lock);
 	if (m_covers.empty())
 		return;
 	if (m_jump != 0)
@@ -1687,7 +1755,7 @@ void CCoverFlow::up(void)
 
 void CCoverFlow::down(void)
 {
-	lock_guard<mutex> lock(m_mutex);
+	//lock_guard<mutex> lock(m_items_lock);
 	if (m_covers.empty())
 		return;
 	if (m_jump != 0)
@@ -1697,7 +1765,7 @@ void CCoverFlow::down(void)
 
 void CCoverFlow::left(void)
 {
-	lock_guard<mutex> lock(m_mutex);
+	//lock_guard<mutex> lock(m_items_lock);
 	if (m_covers.empty())
 		return;
 	if (m_jump != 0)
@@ -1707,11 +1775,13 @@ void CCoverFlow::left(void)
 
 void CCoverFlow::right(void)
 {
-	lock_guard<mutex> lock(m_mutex);
+	//lock_guard<mutex> lock(m_items_lock);
 	if (m_covers.empty())
 		return;
+
 	if (m_jump != 0)
 		return;
+
 	_right(m_minDelay, m_rows >= 3 ? m_rows - 2 : 1);
 }
 
@@ -1734,6 +1804,7 @@ void CCoverFlow::_left(int repeatDelay, u32 step)
 
 	if (m_delay > 0)
 		return;
+
 	m_moved = true;
 	m_delay = repeatDelay;
 	m_covers[m_range / 2].angle += _coverMovesA();
@@ -1764,7 +1835,7 @@ void CCoverFlow::_left(int repeatDelay, u32 step)
 		_updateAllTargets();
 		_instantTarget(0);
 	}
-	_playSound();
+	//_playSound();
 	m_covers[m_range / 2].angle -= _coverMovesA();
 	m_covers[m_range / 2].pos -= _coverMovesP();
 }
@@ -1806,7 +1877,7 @@ void CCoverFlow::_right(int repeatDelay, u32 step)
 		_updateAllTargets();
 		_instantTarget(m_range - 1);
 	}
-	_playSound();
+	//_playSound();
 	m_covers[m_range / 2].angle -= _coverMovesA();
 	m_covers[m_range / 2].pos -= _coverMovesP();
 }
@@ -1855,7 +1926,7 @@ bool CCoverFlow::mouseOver(CVideo &vid, int x, int y)
 
 bool CCoverFlow::findId(const char *id, bool instant)
 {
-	lock_guard<mutex> lock(m_mutex);
+	//lock_guard<mutex> lock(m_items_lock);
 	string strId(id);
 	u32 i;
 	int j;
@@ -1946,9 +2017,10 @@ void CCoverFlow::pageDown(void)
 
 void CCoverFlow::flip(bool force, bool f)
 {
-	lock_guard<mutex> lock(m_mutex);
+	//lock_guard<mutex> lock(m_items_lock);
 	if (m_covers.empty() || !m_selected)
 		return;
+
 	CCoverFlow::CCover &cvr = m_covers[m_range / 2];
 	if (!force)
 		f = m_loSelected.centerAngle == cvr.targetAngle && m_loSelected.centerPos == cvr.targetPos && m_loSelected.centerScale == cvr.targetScale;
@@ -1980,12 +2052,20 @@ void CCoverFlow::_loadAllCovers(int i)
 	int s = (int)m_items.size();
 
 	if (m_rows >= 3)
+	{
 		for (int j = 0; j < r; ++j)
+		{
 			for (int k = 0; k < c; ++k)
 				_loadCover(j + k * r, loopNum(i + (j - r / 2) + (k - c / 2) * (r - 2), s));
+		}
+	}
 	else
+	{
 		for (int k = 0; k < (int)m_range; ++k)
+		{
 			_loadCover(k, loopNum(i + k - (int)m_range / 2, s));
+		}
+	}
 }
 
 void CCoverFlow::_setJump(int j)
@@ -2011,7 +2091,7 @@ void CCoverFlow::_completeJump(void)
 
 wchar_t CCoverFlow::nextLetter(void)
 {
-	lock_guard<mutex> lock(m_mutex);
+	//lock_guard<mutex> lock(m_items_lock);
 	u32 curPos;
 	u32 n = m_items.size();
 	u32 i;
@@ -2036,7 +2116,7 @@ wchar_t CCoverFlow::nextLetter(void)
 
 wchar_t CCoverFlow::prevLetter(void)
 {
-	lock_guard<mutex> lock(m_mutex);
+	//lock_guard<mutex> lock(m_items_lock);
 	u32 curPos;
 	u32 n = m_items.size();
 	u32 i;
@@ -2059,36 +2139,44 @@ wchar_t CCoverFlow::prevLetter(void)
 	return c;
 }
 
-void CCoverFlow::_coverTick(int i)
+void CCoverFlow::_coverTick(int i, float dt)
 {
-	float speed = m_selected ? 0.07f : 0.1f;
-	Vector3D posDist(m_covers[i].targetPos - m_covers[i].pos);
+	CCover & cover = m_covers[i];
+
+	//float speed = m_selected ? 0.07f * dt : 0.1f * dt;
+	float speed = m_selected ? 1.75f * dt : 2.5f * dt;
+	Vector3D posDist(cover.targetPos - cover.pos);
 	int colorDist;
 
-	if (posDist.sqNorm() < 0.5f)
-		speed *= 0.5f;
-	m_covers[i].angle += (m_covers[i].targetAngle - m_covers[i].angle) * speed;
-	m_covers[i].pos += posDist * speed;
-	m_covers[i].scale += (m_covers[i].targetScale - m_covers[i].scale) * speed;
-	if (m_covers[i].color != m_covers[i].targetColor)
+	//speed = posDist.sqNorm() * posDist.sqNorm() * dt;
+
+	//if (posDist.sqNorm() < 0.5f) speed *= 0.5f;
+	//speed *= 0.5f;
+
+	//speed *= posDist.sqNorm();
+
+	cover.angle += (cover.targetAngle - cover.angle) * speed;
+	cover.pos += posDist * speed;
+	cover.scale += (cover.targetScale - cover.scale) * speed;
+	if (cover.color != cover.targetColor)
 	{
-		CColor c(m_covers[i].color);
-		m_covers[i].color = CColor::interpolate(c, m_covers[i].targetColor, 0x20);
-		if (m_covers[i].color == c)	// If the interpolation doesn't do anything because of numerical approximation, force the target color
-			m_covers[i].color = m_covers[i].targetColor;
+		CColor c(cover.color);
+		cover.color = CColor::interpolate(c, cover.targetColor, 0x20);
+		if (cover.color == c)	// If the interpolation doesn't do anything because of numerical approximation, force the target color
+			cover.color = cover.targetColor;
 	}
-	if (m_covers[i].shadowColor != m_covers[i].targetShadowColor)
+	if (cover.shadowColor != cover.targetShadowColor)
 	{
-		CColor c(m_covers[i].shadowColor);
-		m_covers[i].shadowColor = CColor::interpolate(c, m_covers[i].targetShadowColor, 0x20);
-		if (m_covers[i].shadowColor == c)	// If the interpolation doesn't do anything because of numerical approximation, force the target color
-			m_covers[i].shadowColor = m_covers[i].targetShadowColor;
+		CColor c(cover.shadowColor);
+		cover.shadowColor = CColor::interpolate(c, cover.targetShadowColor, 0x20);
+		if (cover.shadowColor == c)	// If the interpolation doesn't do anything because of numerical approximation, force the target color
+			cover.shadowColor = cover.targetShadowColor;
 	}
-	m_covers[i].txtAngle += (m_covers[i].txtTargetAngle - m_covers[i].txtAngle) * speed;
-	m_covers[i].txtPos += (m_covers[i].txtTargetPos - m_covers[i].txtPos) * speed;
-	colorDist = (int)m_covers[i].txtTargetColor - (int)m_covers[i].txtColor;
-	m_covers[i].txtColor += abs(colorDist) >= 8 ? (u8)(colorDist / 8) : (u8)colorDist;
-	m_covers[i].title.tick();
+	cover.txtAngle += (cover.txtTargetAngle - cover.txtAngle) * speed;
+	cover.txtPos += (cover.txtTargetPos - cover.txtPos) * speed;
+	colorDist = (int)cover.txtTargetColor - (int)cover.txtColor;
+	cover.txtColor += abs(colorDist) >= 8 ? (u8)(colorDist / 8) : (u8)colorDist;
+	cover.title.tick(dt);
 }
 
 void CCoverFlow::_unselect(void)
@@ -2113,11 +2201,16 @@ void CCoverFlow::_jump(void)
 	int delay = 2;
 
 	if (m_rows >= 3)
+	{
 		step = (u32)abs(m_jump) <= (m_rows - 2) / 2 ? 1 : m_rows - 2;
+	}
 	else
+	{
 		// Cheat and skip covers we wouldn't see anyway
 		// This means the jump shouldn't be modified before it's done completely
 		step = (u32)abs(m_jump) > m_range + 1 ? abs(m_jump) - (m_range + 1) : 1;
+	}
+	
 	if (m_jump < 0)
 	{
 		_left(delay, step);
@@ -2128,22 +2221,29 @@ void CCoverFlow::_jump(void)
 		_right(delay, step);
 		m_jump -= step;
 	}
+
 }
 
-void CCoverFlow::tick(void)
+void CCoverFlow::tick(float dt)
 {
-	lock_guard<mutex> lock(m_mutex);
+	//lock_guard<mutex> lock(m_items_lock);
 	if (m_covers.empty())
 		return;
-	++m_tickCount;
+
+	m_tickCount += dt * 12.f;
 	if (m_delay > 0)
 		--m_delay;
 	else
 		_jump();
+
 	for (u32 i = 0; i < m_range; ++i)
-		_coverTick(i);
-	m_cameraPos += (m_targetCameraPos - m_cameraPos) * 0.2f;
-	m_cameraAim += (m_targetCameraAim - m_cameraAim) * 0.2f;
+		_coverTick(i, dt);
+	
+	//m_cameraPos += (m_targetCameraPos - m_cameraPos) * 0.2f * dt;
+	//m_cameraAim += (m_targetCameraAim - m_cameraAim) * 0.2f * dt;
+
+	m_cameraPos += (m_targetCameraPos - m_cameraPos) * 6.f * dt;
+	m_cameraAim += (m_targetCameraAim - m_cameraAim) * 6.f * dt;
 }
 
 struct SWFCHeader
@@ -2195,9 +2295,10 @@ bool CCoverFlow::preCacheCover(const char *id, const u8 *png, bool full)
 	
 	if (m_cachePath.empty())
 		return false;
-	if (STexture::TE_OK != tex.fromPNG(png, textureFmt, ALLOC_COVER, 32)) {
+	
+	if (STexture::TE_OK != tex.fromPNG(png, textureFmt, ALLOC_COVER, 32))
 		return false;
-	}
+
 	bufSize = fixGX_GetTexBufferSize(tex.width, tex.height, tex.format, tex.maxLOD > 0 ? GX_TRUE : GX_FALSE, tex.maxLOD);
 	if (m_compressCache)
 	{
@@ -2211,6 +2312,7 @@ bool CCoverFlow::preCacheCover(const char *id, const u8 *png, bool full)
 	file = fopen(sfmt("%s/%s.wfc", m_cachePath.c_str(), id).c_str(), "wb");
 	if (file == 0)
 		return false;
+	
 	SWFCHeader header(tex, full, m_compressCache);
 	fwrite(&header, 1, sizeof header, file);
 	if (m_compressCache)
@@ -2250,24 +2352,47 @@ bool CCoverFlow::_loadCoverTexPNG(u32 i, bool box, bool hq)
 
 	if (m_waitingToClear)
 		return false;
-	const char *path = box ? m_items[i].boxPicPath.c_str() : m_items[i].picPath.c_str();
+	
+	const char *path;
+
+	//CItem 
+	
+	if (box)
+		path = m_items[i].boxPicPath.c_str();
+	else
+		path = m_items[i].picPath.c_str();
+	
 	if (STexture::TE_OK != tex.fromPNGFile(path, textureFmt, ALLOC_COVER, 32))
 		return false;
+	
 	if (m_waitingToClear)
 		return false;
 	
-	m_mutex.lock();
+	//m_items_lock.lock();
 	m_items[i].texture = tex;
 	m_items[i].boxTexture = box;
 	m_items[i].state = CCoverFlow::STATE_Ready;
-	m_mutex.unlock();
+	//m_items_lock.unlock();
 
 	// Save the texture to the cache folder for the next time
 	if (!m_cachePath.empty())
 	{
 		bufSize = fixGX_GetTexBufferSize(tex.width, tex.height, tex.format, tex.maxLOD > 0 ? GX_TRUE : GX_FALSE, tex.maxLOD);
-		zBufferSize = m_compressCache ? bufSize + bufSize / 100 + 12 : bufSize;
-		zBuffer = m_compressCache ? smartMalloc(zBufferSize) : tex.data;
+		
+		if (m_compressCache)
+		{
+			zBufferSize = bufSize + bufSize / 100 + 12;
+			zBuffer = smartMalloc(zBufferSize);
+		}
+		else
+		{
+			zBufferSize = bufSize;
+			zBuffer = tex.data;
+		}
+
+		//zBufferSize = m_compressCache ? bufSize + bufSize / 100 + 12 : bufSize;
+		//zBuffer = m_compressCache ? smartMalloc(zBufferSize) : tex.data;
+
 		if (!!zBuffer && (!m_compressCache || compress(zBuffer.get(), &zBufferSize, tex.data.get(), bufSize) == Z_OK))
 		{
 			file = fopen(sfmt("%s/%s.wfc", m_cachePath.c_str(), m_items[i].id.c_str()).c_str(), "wb");
@@ -2303,9 +2428,10 @@ bool CCoverFlow::_calcTexLQLOD(STexture &tex)
 
 void CCoverFlow::_dropHQLOD(int i)
 {
-	lock_guard<mutex> lock(m_mutex);
+//	lock_guard<mutex> lock(m_items_lock);
 	if ((u32)i >= m_items.size())
 		return;
+
 	STexture &prevTex = m_items[i].texture;
 	STexture newTex;
 	u32 prevTexLen;
@@ -2317,11 +2443,13 @@ void CCoverFlow::_dropHQLOD(int i)
 	newTex.format = prevTex.format;
 	if (!CCoverFlow::_calcTexLQLOD(newTex))
 		return;
+
 	prevTexLen = fixGX_GetTexBufferSize(prevTex.width, prevTex.height, prevTex.format, prevTex.maxLOD > 0 ? GX_TRUE : GX_FALSE, prevTex.maxLOD);
 	newTexLen = fixGX_GetTexBufferSize(newTex.width, newTex.height, newTex.format, newTex.maxLOD > 0 ? GX_TRUE : GX_FALSE, newTex.maxLOD);
 	newTex.data = smartCoverAlloc(newTexLen);
 	if (!newTex.data)
 		return;
+
 	memcpy(newTex.data.get(), prevTex.data.get() + (prevTexLen - newTexLen), newTexLen);
 	DCFlushRange(newTex.data.get(), newTexLen);
 	prevTex = newTex;
@@ -2342,6 +2470,7 @@ CCoverFlow::CLRet CCoverFlow::_loadCoverTex(u32 i, bool box, bool hq)
 
 	if (m_waitingToClear)
 		return CL_ERROR;
+	
 	// Try to find the texture in the cache
 	if (!m_cachePath.empty())
 	{
@@ -2350,10 +2479,12 @@ CCoverFlow::CLRet CCoverFlow::_loadCoverTex(u32 i, bool box, bool hq)
 		{
 			fseek(file, 0, SEEK_END);
 			fileSize = ftell(file);
-			if (fileSize > sizeof header)
+			
+			if (fileSize > sizeof(header))
 			{
 				fseek(file, 0, SEEK_SET);
-				fread(&header, 1, sizeof header, file);
+				fread(&header, 1, sizeof(header), file);
+
 				// Try to find a matching cache file, otherwise try the PNG file, otherwise try again with the cache file with less constraints
 				if (header.newFmt != 0 && (((!box || header.full != 0) && (header.cmpr != 0) == m_compressTextures) || (!_loadCoverTexPNG(i, box, hq))))
 				{
@@ -2362,31 +2493,49 @@ CCoverFlow::CLRet CCoverFlow::_loadCoverTex(u32 i, bool box, bool hq)
 					tex.height = header.getHeight();
 					tex.maxLOD = header.maxLOD;
 					bufSize = fixGX_GetTexBufferSize(tex.width, tex.height, tex.format, tex.maxLOD > 0 ? GX_TRUE : GX_FALSE, tex.maxLOD);
+					
 					if (!hq)
 						CCoverFlow::_calcTexLQLOD(tex);
+
 					texLen = fixGX_GetTexBufferSize(tex.width, tex.height, tex.format, tex.maxLOD > 0 ? GX_TRUE : GX_FALSE, tex.maxLOD);
 					tex.data = smartCoverAlloc(texLen);
-					ptrTex = (header.zipped != 0) ? smartMem2Alloc(bufSize) : tex.data;
+					
+					if (header.zipped)
+						ptrTex = smartMem2Alloc(bufSize);
+					else
+						ptrTex = tex.data;
+
+					
 					if (!ptrTex || !tex.data)
+					{
 						allocFailed = true;
+					}
 					else
 					{
-						zBuffer = (header.zipped != 0) ? smartMem2Alloc(fileSize - sizeof header) : ptrTex;
-						if (!!zBuffer && ((header.zipped != 0) || fileSize - sizeof header == bufSize))
+						if (header.zipped)
+							zBuffer = smartMem2Alloc(fileSize - sizeof(header));
+						else
+							zBuffer = ptrTex;
+
+						if (!!zBuffer && ((header.zipped != 0) || fileSize - sizeof(header) == bufSize))
 						{
 							if (header.zipped == 0)
 							{
-								fseek(file, fileSize - sizeof header - texLen, SEEK_CUR);
+								fseek(file, fileSize - sizeof(header) - texLen, SEEK_CUR);
 								fread(tex.data.get(), 1, texLen, file);
 							}
 							else
+							{
 								fread(zBuffer.get(), 1, fileSize - sizeof header, file);
+							}
+
 							uLongf size = bufSize;
-							if (header.zipped == 0 || (uncompress(ptrTex.get(), &size, zBuffer.get(), fileSize - sizeof header) == Z_OK && size == bufSize))
+							if (header.zipped == 0 || (uncompress(ptrTex.get(), &size, zBuffer.get(), fileSize - sizeof(header)) == Z_OK && size == bufSize))
 							{
 								if (header.zipped != 0)
 									memcpy(tex.data.get(), ptrTex.get() + bufSize - texLen, texLen);
-								lock_guard<mutex> lock(m_mutex);
+								
+//								lock_guard<mutex> lock(m_items_lock);
 								m_items[i].texture = tex;
 								DCFlushRange(tex.data.get(), texLen);
 								m_items[i].state = CCoverFlow::STATE_Ready;
@@ -2405,10 +2554,25 @@ CCoverFlow::CLRet CCoverFlow::_loadCoverTex(u32 i, bool box, bool hq)
 	}
 	if (allocFailed)
 		return CCoverFlow::CL_NOMEM;
+	
 	// If not found, load the PNG
 	return _loadCoverTexPNG(i, box, hq) ? CCoverFlow::CL_OK : CCoverFlow::CL_ERROR;
 }
 
+/*
+CoverFlow thread shared mem
+- m_box
+- m_range
+m_numBufCovers
+m_loadingPic
+m_waitingToClear
+m_moved
+m_items
+m_covers
+m_hqCover
+
+
+*/
 int CCoverFlow::_picLoader(CCoverFlow *cf)
 {
 	u32 numItems;
@@ -2422,49 +2586,77 @@ int CCoverFlow::_picLoader(CCoverFlow *cf)
 
 	if (!cf->m_loadingPic)
 		return 0;
+
+	log_printf("_picLoader started\n");
+	
 	while (!cf->m_waitingToClear)
 	{
+		usleep(100 * 1000);
+
 		ret = CCoverFlow::CL_OK;
 		cf->m_moved = false;
 		numItems = cf->m_items.size();
 		firstItem = cf->m_covers[cf->m_range / 2].index;
 		lastVisible = bufferSize - 1;
 		newHQCover = firstItem;
+		
 		if ((u32)cf->m_hqCover < numItems && newHQCover != cf->m_hqCover)
 		{
+			log_printf("_dropHQLOD\n");
 			cf->_dropHQLOD(cf->m_hqCover);
 			cf->m_hqCover = -1;
 		}
-		cf->m_mutex.lock();
+		
+		//cf->m_items_lock.lock();
+
+		// this is to release the not visible ones...
 		for (u32 j = numItems - 1; j > lastVisible; --j)
 		{
-			i = loopNum((j & 1) != 0 ? firstItem - (j + 1) / 2 : firstItem + j / 2, numItems);
+			if ((j & 1) != 0)
+				i = loopNum(firstItem - (j + 1) / 2, numItems);
+			else
+				i = loopNum(firstItem + j / 2, numItems);
+
+			log_printf("release texture: %u\n", i);
+
+			//i = loopNum((j & 1) != 0 ? firstItem - (j + 1) / 2 : firstItem + j / 2, numItems);
+
 			cf->m_items[i].texture.data.release();
 			cf->m_items[i].state = CCoverFlow::STATE_Loading;
 		}
-		cf->m_mutex.unlock();
+		//cf->m_items_lock.unlock();
+		
+
 		for (u32 j = 0; j <= lastVisible; ++j)
 		{
 			if (cf->m_waitingToClear || cf->m_moved || ret == CCoverFlow::CL_NOMEM)
 				break;
+
 			i = loopNum((j & 1) != 0 ? firstItem - (j + 1) / 2 : firstItem + j / 2, numItems);
 			if (cf->m_items[i].state != CCoverFlow::STATE_Loading && (i != (u32)newHQCover || newHQCover == cf->m_hqCover))
 				continue;
+
+			log_printf("load cover: %u\n", i);
+
 			cf->m_hqCover = newHQCover;
 			ret = cf->_loadCoverTex(i, box, i == (u32)newHQCover);
 			if (ret == CCoverFlow::CL_ERROR)
 			{
+				log_printf("  load cover texure: %u\n", i);
 				ret = cf->_loadCoverTex(i, !box, i == (u32)newHQCover);
 				if (ret == CCoverFlow::CL_ERROR && !cf->m_waitingToClear)
 					cf->m_items[i].state = CCoverFlow::STATE_NoCover;
 			}
 		}
+
 		if (ret == CCoverFlow::CL_NOMEM && bufferSize > 3)
 			bufferSize -= 2;
 
 		// sleep a bit so that the picture loader thread isn't raping the cpu
-		usleep(10 * 1000);
+		//usleep(100 * 1000);
 	}
 	cf->m_loadingPic = false;
+
+	log_printf("_picLoader stopped\n");
 	return 0;
 }

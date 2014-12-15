@@ -226,6 +226,7 @@ class FreeTypeGX {
 		float yScale;
 		float xPos;
 		float yPos;
+		float zPos;
 
 		uint8_t textureFormat;		/**< Defined texture format of the target EFB. */
 		uint8_t positionFormat;		/**< Defined position format of the texture. */
@@ -277,7 +278,9 @@ class FreeTypeGX {
 		float getY(void) const { return yPos; }
 		void setX(float f) { xPos = f; }
 		void setY(float f) { yPos = f; }
-		void reset(void) { xScale = 1.f; yScale = 1.f; xPos = 0.f; yPos = 0.f; };
+		void setZ(float z) { zPos = z; }
+
+		void reset(void) { xScale = 1.f; yScale = 1.f; xPos = 0.f; yPos = 0.f; zPos = 0.f; };
 };
 
 #endif /* FREETYPEGX_H_ */

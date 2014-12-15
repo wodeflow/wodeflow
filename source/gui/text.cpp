@@ -1,4 +1,3 @@
-
 #include "text.hpp"
 #include <stdio.h>
 #include <wchar.h>
@@ -6,8 +5,6 @@
 using namespace std;
 
 static const wchar_t *g_whitespaces = L" \f\n\r\t\v";
-
-
 
 bool SFont::fromBuffer(const u8 *buffer, u32 bufferSize, u32 size, u32 lspacing)
 {
@@ -189,11 +186,15 @@ void CText::setColor(const CColor &c)
 	m_color = c;
 }
 
-void CText::tick(void)
+void CText::tick(float dt)
 {
 	for (u32 k = 0; k < m_lines.size(); ++k)
+	{
 		for (u32 i = 0; i < m_lines[k].size(); ++i)
-			m_lines[k][i].pos += (m_lines[k][i].targetPos - m_lines[k][i].pos) * 0.05f;
+		{
+			m_lines[k][i].pos += (m_lines[k][i].targetPos - m_lines[k][i].pos) * 2.5f * dt;
+		}
+	}
 }
 
 void CText::draw(void)
@@ -201,10 +202,12 @@ void CText::draw(void)
 	if (!m_font.font)
 		return;
 	for (u32 k = 0; k < m_lines.size(); ++k)
+	{
 		for (u32 i = 0; i < m_lines[k].size(); ++i)
 		{
 			m_font.font->setX(m_lines[k][i].pos.x);
 			m_font.font->setY(m_lines[k][i].pos.y);
 			m_font.font->drawText(0, m_font.lineSpacing, m_lines[k][i].text.c_str(), m_color);
 		}
+	}
 }

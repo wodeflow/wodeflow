@@ -43,6 +43,7 @@ FreeTypeGX::FreeTypeGX(uint8_t textureFormat, uint8_t positionFormat) {
 	yScale = 1.f;
 	xPos = 0.f;
 	yPos = 0.f;
+	zPos = 0.f;
 	this->ftFace = 0;
 }
 
@@ -59,7 +60,7 @@ FreeTypeGX::~FreeTypeGX() {
 }
 
 /**
- * Convert a short char sctring to a wide char string.
+ * Convert a short char string to a wide char string.
  * 
  * This routine converts a supplied shot character string into a wide character string.
  * Note that it is the user's responsibility to clear the returned buffer once it is no longer needed.
@@ -402,7 +403,7 @@ uint16_t FreeTypeGX::drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor col
 
 		if(glyphData != nullptr) {
 			
-			if(this->ftKerningEnabled && i) {
+			if(this->ftKerningEnabled && i > 0) {
 				FT_Get_Kerning( this->ftFace, font_data_[text[i - 1]]->glyphIndex, glyphData->glyphIndex, FT_KERNING_DEFAULT, &pairDelta );
 				x_pos += pairDelta.x >> 6;
 			}
@@ -563,7 +564,6 @@ ftgxDataOffset FreeTypeGX::getOffset(wchar_t *text) {
 		else
 			glyphData = cacheGlyphData(text[i]);
 
-		
 		if(glyphData != nullptr) {
 
 			strMax = glyphData->renderOffsetMax > strMax ? glyphData->renderOffsetMax : strMax;
@@ -583,7 +583,7 @@ ftgxDataOffset FreeTypeGX::getOffset(wchar_t const *text) {
 }
 
 /**
- * Copies the supplied texture quad to the EFB. 
+ * Copies the supplied texture quad to the EFB.
  * 
  * This routine uses the in-built GX quad builder functions to define the texture bounds and location on the EFB target.
  * 
@@ -611,8 +611,9 @@ void FreeTypeGX::copyTextureToFramebuffer(GXTexObj *texObj, uint8_t positionForm
 
 //	GX_SetTevOp (GX_TEVSTAGE0, GX_MODULATE);
 //	GX_SetVtxDesc (GX_VA_TEX0, GX_DIRECT);
-  	
+
 	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
+
   	switch(positionFormat) {
 	  	case GX_POS_XY:
 			GX_Position2f32(x * xScale, y * yScale);
@@ -633,29 +634,42 @@ void FreeTypeGX::copyTextureToFramebuffer(GXTexObj *texObj, uint8_t positionForm
 			break;
 
 	  	case GX_POS_XYZ:
-			GX_Position3f32(x * xScale, y * yScale, 0);
+			GX_Position3f32(x * xScale, y * yScale, zPos);
 			GX_Color4u8(color.r, color.g, color.b, color.a);
 	 		GX_TexCoord2f32(0.0f, 0.0f);
 	
-	 		GX_Position3f32((f32TexWidth + x) * xScale, y * yScale, 0);
+			GX_Position3f32((f32TexWidth + x) * xScale, y * yScale, zPos);
 			GX_Color4u8(color.r, color.g, color.b, color.a);
 			GX_TexCoord2f32(1.0f, 0.0f);
 	
-			GX_Position3f32((f32TexWidth + x) * xScale, (f32TexHeight + y) * yScale, 0);
+			GX_Position3f32((f32TexWidth + x) * xScale, (f32TexHeight + y) * yScale, zPos);
 			GX_Color4u8(color.r, color.g, color.b, color.a);
 			GX_TexCoord2f32(1.0f, 1.0f);
 	
-			GX_Position3f32(x * xScale, (f32TexHeight + y) * yScale, 0);
+			GX_Position3f32(x * xScale, (f32TexHeight + y) * yScale, zPos);
 			GX_Color4u8(color.r, color.g, color.b, color.a);
 			GX_TexCoord2f32(0.0f, 1.0f);
 			break;
 	  	default:
 	  		break;
   	}
+
 	GX_End();
 
 //	GX_SetTevOp (GX_TEVSTAGE0, GX_PASSCLR);
 //	GX_SetVtxDesc (GX_VA_TEX0, GX_NONE);
+
+/* we would like to create a rectangle around the character...
+	GX_Begin(GX_LINESTRIP, GX_VTXFMT0, 4);
+
+	uint32_t henk = 0xFFFFFFFF;
+
+	GX_Position3f32(x * xScale, y * yScale, zPos);					GX_Color1u32(henk);	GX_TexCoord2f32(0.0f, 0.0f);
+	GX_Position3f32((f32TexWidth + x) * xScale, y * yScale, zPos);	GX_Color1u32(henk);	GX_TexCoord2f32(1.0f, 0.0f);
+	GX_Position3f32((f32TexWidth + x) * xScale, (f32TexHeight + y) * yScale, zPos);	GX_Color1u32(henk);	GX_TexCoord2f32(1.0f, 1.0f);
+	GX_Position3f32(x * xScale, (f32TexHeight + y) * yScale, zPos);	GX_Color1u32(henk);	GX_TexCoord2f32(0.0f, 1.0f);
+	GX_End();
+*/
 }
 
 /**

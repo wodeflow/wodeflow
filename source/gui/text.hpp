@@ -30,7 +30,7 @@ public:
 	void setText(SFont font, const wstringEx &t);
 	void setColor(const CColor &c);
 	void setFrame(float width, u16 style, bool ignoreNewlines = false, bool instant = false);
-	void tick(void);
+	void tick(float dt);
 	void draw(void);
 private:
 	struct SWord

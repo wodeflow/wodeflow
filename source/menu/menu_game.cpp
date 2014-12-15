@@ -124,10 +124,10 @@ void CMenu::_game(bool launch)
 
 	while (true)
 	{
-		string id(m_cf.getId());
-		unsigned long idx = m_cf.getIdx();
-		unsigned long part = m_cf.getPart();
-		int type = m_cf.getType();
+		string id(m_coverflow.getId());
+		unsigned long idx = m_coverflow.getIdx();
+		unsigned long part = m_coverflow.getPart();
+		int type = m_coverflow.getType();
 		
 		
 		if (!first)
@@ -149,14 +149,14 @@ void CMenu::_game(bool launch)
 		{
 			int cfVersion = 1 + loopNum(m_cfg.getInt(" GENERAL", "last_cf_mode", 1), m_numCFVersions);
 			_loadCFLayout(cfVersion);
-			m_cf.applySettings();
+			m_coverflow.applySettings();
 			m_cfg.setInt(" GENERAL", "last_cf_mode", cfVersion);
 		}
 		else if ((padsState & WPAD_BUTTON_2) != 0)
 		{
 			int cfVersion = 1 + loopNum(m_cfg.getInt(" GENERAL", "last_cf_mode", 1) - 2, m_numCFVersions);
 			_loadCFLayout(cfVersion);
-			m_cf.applySettings();
+			m_coverflow.applySettings();
 			m_cfg.setInt(" GENERAL", "last_cf_mode", cfVersion);
 		}
 		if (launch || (padsState & WPAD_BUTTON_A) != 0)
@@ -195,28 +195,28 @@ void CMenu::_game(bool launch)
 			else if (launch || m_btnMgr.selected() == m_gameBtnPlay || (!wd->ir.valid && m_btnMgr.selected() == (u32)-1))
 			{
 				_hideGame();
-				m_cf.clear();
+				m_coverflow.clear();
 				m_vid.waitMessage(m_waitMessage);
 				_launchGame(id, idx, part);
 				launch = false;
 				WPAD_SetVRes(0, m_vid.width() + m_cur.width(), m_vid.height() + m_cur.height());	// b/c IOS reload
 				_showGame();
 				_initCF();
-				m_cf.select();
+				m_coverflow.select();
 			}
-			else if (m_cf.mouseOver(m_vid, m_cur.x(), m_cur.y()))
-				m_cf.flip();
+			else if (m_coverflow.mouseOver(m_vid, m_cur.x(), m_cur.y()))
+				m_coverflow.flip();
 		}
 		if ((padsState & (WPAD_BUTTON_LEFT | WPAD_BUTTON_RIGHT | WPAD_BUTTON_MINUS | WPAD_BUTTON_PLUS)) != 0)
 		{
 			if ((padsState & WPAD_BUTTON_MINUS) != 0)
-				m_cf.up();
+				m_coverflow.up();
 			else if ((padsState & WPAD_BUTTON_LEFT) != 0)
-				m_cf.left();
+				m_coverflow.left();
 			else if ((padsState & WPAD_BUTTON_PLUS) != 0)
-				m_cf.down();
+				m_coverflow.down();
 			else // ((padsState & WPAD_BUTTON_RIGHT) != 0)
-				m_cf.right();
+				m_coverflow.right();
 			_showGame();
 //			_playGameSound();
 		}
@@ -672,12 +672,12 @@ void CMenu::_playGameSound(void)
 		return;
 
 	m_gameSndMutex.lock();
-	m_gameSoundId = m_cf.getId();
-	m_gameSoundIdx = m_cf.getIdx();
-	m_gameSoundPart = m_cf.getPart();
+	m_gameSoundId = m_coverflow.getId();
+	m_gameSoundIdx = m_coverflow.getIdx();
+	m_gameSoundPart = m_coverflow.getPart();
 	m_gameSndMutex.unlock();
 
-	m_cf.stopPicLoader();
+	m_coverflow.stopPicLoader();
 	if (m_gameSoundThread == 0)
 		LWP_CreateThread(&m_gameSoundThread, (void *(*)(void *))CMenu::_loadGameSoundThrd, (void *)this, 0, 8 * 1024, 40);
 }

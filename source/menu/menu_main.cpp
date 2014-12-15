@@ -116,32 +116,37 @@ int CMenu::main(void)
 			reload = (wd->btns_h & WPAD_BUTTON_B) != 0;
 			break;
 		}
+
 		if (wd->ir.valid)
 			m_btnMgr.mouse(wd->ir.x - m_cur.width() / 2, wd->ir.y - m_cur.height() / 2);
+
 		++repeatButton;
+		
 		if ((wd->btns_h & WPAD_BUTTON_A) == 0)
 			buttonHeld = (u32)-1;
 		else if (buttonHeld != (u32)-1 && buttonHeld == m_btnMgr.selected() && repeatButton >= 16)
 			padsState |= WPAD_BUTTON_A;
+		
 		if ((padsState & WPAD_BUTTON_1) != 0)
 		{
 			int cfVersion = 1 + loopNum(m_cfg.getInt(" GENERAL", "last_cf_mode", 1), m_numCFVersions);
 			_loadCFLayout(cfVersion);
-			m_cf.applySettings();
+			m_coverflow.applySettings();
 			m_cfg.setInt(" GENERAL", "last_cf_mode", cfVersion);
 		}
 		else if ((padsState & WPAD_BUTTON_2) != 0)
 		{
 			int cfVersion = 1 + loopNum(m_cfg.getInt(" GENERAL", "last_cf_mode", 1) - 2, m_numCFVersions);
 			_loadCFLayout(cfVersion);
-			m_cf.applySettings();
+			m_coverflow.applySettings();
 			m_cfg.setInt(" GENERAL", "last_cf_mode", cfVersion);
 		}
+		
 		if (((padsState & (WPAD_BUTTON_DOWN | WPAD_BUTTON_RIGHT)) != 0 && (wd->btns_h & WPAD_BUTTON_B) != 0)
 			|| ((padsState & WPAD_BUTTON_PLUS) != 0 && m_alphaSearch == ((wd->btns_h & WPAD_BUTTON_B) == 0)))
 		{
 			curLetter.resize(1);
-			curLetter[0] = m_cf.nextLetter();
+			curLetter[0] = m_coverflow.nextLetter();
 			m_letter = 60;
 			m_btnMgr.setText(m_mainLblLetter, curLetter);
 			m_btnMgr.show(m_mainLblLetter);
@@ -151,29 +156,32 @@ int CMenu::main(void)
 			|| ((padsState & WPAD_BUTTON_MINUS) != 0 && m_alphaSearch == ((wd->btns_h & WPAD_BUTTON_B) == 0)))
 		{
 			curLetter.resize(1);
-			curLetter[0] = m_cf.prevLetter();
+			curLetter[0] = m_coverflow.prevLetter();
 			m_letter = 60;
 			m_btnMgr.setText(m_mainLblLetter, curLetter);
 			m_btnMgr.show(m_mainLblLetter);
 		}
 		else if ((padsState & WPAD_BUTTON_UP) != 0)
-			m_cf.up();
+			m_coverflow.up();
 		else if ((padsState & WPAD_BUTTON_DOWN) != 0)
-			m_cf.down();
+			m_coverflow.down();
 		else if ((padsState & WPAD_BUTTON_MINUS) != 0)
-			m_cf.pageUp();
+			m_coverflow.pageUp();
 		else if ((padsState & WPAD_BUTTON_PLUS) != 0)
-			m_cf.pageDown();
+			m_coverflow.pageDown();
 		else if ((btn & WPAD_BUTTON_LEFT) != 0 || ((angle > 255 && angle < 285) && mag > 0.75))
-			m_cf.left();
+			m_coverflow.left();
 		else if ((btn & WPAD_BUTTON_RIGHT) != 0 || ((angle > 75 && angle < 105) && mag > 0.75))
-			m_cf.right();
+			m_coverflow.right();
 		if ((padsState & WPAD_BUTTON_A) != 0)
 		{
 			if (buttonHeld != m_btnMgr.selected())
 				m_btnMgr.click();
+			
 			if (m_btnMgr.selected() == m_mainBtnQuit)
+			{
 				break;
+			}
 			else if (m_btnMgr.selected() == m_mainBtnInit)
 			{
 				_hideMain();
@@ -204,7 +212,7 @@ int CMenu::main(void)
 			}
 			else if (m_btnMgr.selected() == m_mainBtnNext)
 			{
-				m_cf.right();
+				m_coverflow.right();
 				if (buttonHeld != m_btnMgr.selected())
 				{
 					repeatButton = 0;
@@ -213,7 +221,7 @@ int CMenu::main(void)
 			}
 			else if (m_btnMgr.selected() == m_mainBtnPrev)
 			{
-				m_cf.left();
+				m_coverflow.left();
 				if (buttonHeld != m_btnMgr.selected())
 				{
 					repeatButton = 0;
@@ -224,34 +232,40 @@ int CMenu::main(void)
 			{
 				m_favorites = !m_favorites;
 				m_cfg.setInt(" GENERAL", "favorites", m_favorites);
-				m_curGameId = m_cf.getId();
+				m_curGameId = m_coverflow.getId();
 				_initCF();
 			}
-			else if (!m_cf.empty())
+			else if (!m_coverflow.empty())
 			{
-				if (m_cf.select())
+				if (m_coverflow.select())
 				{
 					_hideMain();
 					_game((wd->btns_h & WPAD_BUTTON_B) != 0);
-					m_cf.cancel();
+					m_coverflow.cancel();
 					_showMain();
 				}
 			}
 		}
+
 		if (m_letter > 0)
+		{
 			if (--m_letter == 0)
 				m_btnMgr.hide(m_mainLblLetter);
+		}
+
 		// 
 		if (!m_gameList.empty() && wd->ir.valid && m_cur.x() >= m_mainPrevZone.x && m_cur.y() >= m_mainPrevZone.y
 			&& m_cur.x() < m_mainPrevZone.x + m_mainPrevZone.w && m_cur.y() < m_mainPrevZone.y + m_mainPrevZone.h)
 			m_btnMgr.show(m_mainBtnPrev);
 		else
 			m_btnMgr.hide(m_mainBtnPrev);
+
 		if (!m_gameList.empty() && wd->ir.valid && m_cur.x() >= m_mainNextZone.x && m_cur.y() >= m_mainNextZone.y
 			&& m_cur.x() < m_mainNextZone.x + m_mainNextZone.w && m_cur.y() < m_mainNextZone.y + m_mainNextZone.h)
 			m_btnMgr.show(m_mainBtnNext);
 		else
 			m_btnMgr.hide(m_mainBtnNext);
+		
 		if (!m_gameList.empty() && wd->ir.valid && m_cur.x() >= m_mainButtonsZone.x && m_cur.y() >= m_mainButtonsZone.y
 			&& m_cur.x() < m_mainButtonsZone.x + m_mainButtonsZone.w && m_cur.y() < m_mainButtonsZone.y + m_mainButtonsZone.h)
 		{
@@ -273,16 +287,17 @@ int CMenu::main(void)
 		}
 		// 
 		if (!wd->ir.valid || m_btnMgr.selected() != (u32)-1)
-			m_cf.mouse(m_vid, -1, -1);
+			m_coverflow.mouse(m_vid, -1, -1);
 		else
-			m_cf.mouse(m_vid, m_cur.x(), m_cur.y());
+			m_coverflow.mouse(m_vid, m_cur.x(), m_cur.y());
+		
 		_mainLoopCommon(wd, true);
 	}
 	WPAD_Rumble(WPAD_CHAN_0, 0);
 	// 
 	GX_InvVtxCache();
 	GX_InvalidateTexAll();
-	m_cf.clear();
+	m_coverflow.clear();
 	m_cfg.save();
 //	m_loc.save();
 	_stopSounds();

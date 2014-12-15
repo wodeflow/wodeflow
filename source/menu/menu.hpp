@@ -23,6 +23,7 @@ public:
 	int main(void);
 	void cleanup(void);
 private:
+	
 	struct SZone
 	{
 		int x;
@@ -30,10 +31,11 @@ private:
 		int w;
 		int h;
 	};
+
 	CVideo &m_vid;
 	CCursor m_cur;
 	CButtonsMgr m_btnMgr;
-	CCoverFlow m_cf;
+	CCoverFlow m_coverflow;
 	std::vector<discHdr> m_gameList;
 	Config m_cfg;
 	Config m_loc;

@@ -100,7 +100,7 @@ bool CMenu::_wbfsOp(CMenu::WBFS_OP op)
 	bool done = false;
 	bool out = false;
 	struct AutoLight { AutoLight(void) { } ~AutoLight(void) { slotLight(false); } } aw;
-	string cfPos = m_cf.getNextId();
+	string cfPos = m_coverflow.getNextId();
 
 	WPAD_Rumble(WPAD_CHAN_0, 0);
 	if (WBFS_Open() < 0)
@@ -112,7 +112,7 @@ bool CMenu::_wbfsOp(CMenu::WBFS_OP op)
 			m_btnMgr.setText(m_wbfsLblDialog, _t("wbfsadddlg", L"Please insert the disc you want to copy, then click on Go."));
 			break;
 		case CMenu::WO_REMOVE_GAME:
-			m_btnMgr.setText(m_wbfsLblDialog, wfmt(_fmt("wbfsremdlg", L"To permanently remove the game : %s, click on Go."), m_cf.getTitle().c_str()));
+			m_btnMgr.setText(m_wbfsLblDialog, wfmt(_fmt("wbfsremdlg", L"To permanently remove the game : %s, click on Go."), m_coverflow.getTitle().c_str()));
 			break;
 		case CMenu::WO_FORMAT:
 			break;
@@ -183,7 +183,7 @@ bool CMenu::_wbfsOp(CMenu::WBFS_OP op)
 						LWP_CreateThread(&thread, (void *(*)(void *))CMenu::_gameInstaller, (void *)this, 0, 8 * 1024, 64);
 						break;
 					case CMenu::WO_REMOVE_GAME:
-						WBFS_RemoveGame((u8 *)m_cf.getId().c_str());
+						WBFS_RemoveGame((u8 *)m_coverflow.getId().c_str());
 						m_btnMgr.show(m_wbfsPBar);
 						m_btnMgr.setProgress(m_wbfsPBar, 0.f, true);
 						m_btnMgr.setProgress(m_wbfsPBar, 1.f);
@@ -218,10 +218,10 @@ bool CMenu::_wbfsOp(CMenu::WBFS_OP op)
 	_hideWBFS();
 	if (done && op == CMenu::WO_REMOVE_GAME)
 	{
-		m_cf.clear();
+		m_coverflow.clear();
 		_loadGameList();
 		_initCF();
-		m_cf.findId(cfPos.c_str(), true);
+		m_coverflow.findId(cfPos.c_str(), true);
 	}
 	if (done && op == CMenu::WO_ADD_GAME)
 		m_gameList.clear();

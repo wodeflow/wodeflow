@@ -12,12 +12,19 @@
 #define TAG_GAME_ID		"gameid"
 #define TAG_LOC			"loc"
 #define TAG_REGION		"region"
-#define TITLES_URL		"http://www.wiitdb.com/titles.txt?LANG=%s"
+#define TITLES_URL		"http://www.gametdb.com/wiitdb.txt?LANG=%s"
+//
+
 #define UPDATE_URL		"http://wodeflow.googlecode.com/svn/trunk/updates"
 
 using namespace std;
 
 static const char FMT_BPIC_URL[] =
+"http://art.gametdb.com/wii/coverfullHQ/{loc}/{gameid6}.png|"
+"http://art.gametdb.com/wii/coverfullHQ/US/{gameid6}.png|" // fallback to US
+"http://art.gametdb.com/wii/coverfull/{loc}/{gameid6}.png";
+
+#if 0
 "http://wiitdb.com/wiitdb/artwork/coverfullHQ/{loc}/{gameid6}.png"\
 "|http://wiitdb.com/wiitdb/artwork/coverfullHQ/EN/{gameid6}.png"\
 "|http://wiitdb.com/wiitdb/artwork/coverfull/{loc}/{gameid6}.png"\
@@ -25,11 +32,22 @@ static const char FMT_BPIC_URL[] =
 "|http://www.muntrue.nl/covers/ALL/512/340/fullcover/{gameid6}.png"; //
 //"|http://wiitdb.com/wiitdb/artwork/cover/{loc}/{gameid4}.png"
 //"|http://wiitdb.com/wiitdb/artwork/cover/EN/{gameid4}.png";
-static const char FMT_PIC_URL[] = "http://wiitdb.com/wiitdb/artwork/cover/{loc}/{gameid6}.png"\
+#endif
+
+static const char FMT_PIC_URL[] =
+"http://art.gametdb.com/wii/coverfullHQ/{loc}/{gameid6}.png|"
+"http://art.gametdb.com/wii/coverfullHQ/US/{gameid6}.png|" // fallback to US
+"http://art.gametdb.com/wii/coverfull/{loc}/{gameid6}.png";
+
+#if 0
+static const char FMT_PIC_URL[] =
+"http://wiitdb.com/wiitdb/artwork/cover/{loc}/{gameid6}.png"\
 "|http://wiitdb.com/wiitdb/artwork/cover/EN/{gameid6}.png"\
 "|http://www.muntrue.nl/covers/ALL/160/225/boxart/{gameid6}.png";//
 //"|http://wiitdb.com/wiitdb/artwork/cover/{loc}/{gameid4}.png"
 //"|http://wiitdb.com/wiitdb/artwork/cover/EN/{gameid4}.png";
+#endif
+
 
 static string countryCode(const string &gameId)
 {
@@ -278,7 +296,7 @@ int CMenu::_coverDownloader(bool missingOnly)
 			++step;
 			string id((const char *)m_gameList[i].id, sizeof m_gameList[i].id);
 			path = sfmt("%s/%s.png", m_boxPicDir.c_str(), id.c_str());
-			if (!missingOnly || (!m_cf.fullCoverCached(id.c_str()) && !checkPNGFile(path.c_str())))
+			if (!missingOnly || (!m_coverflow.fullCoverCached(id.c_str()) && !checkPNGFile(path.c_str())))
 				coverList.push_back(id);
 		}
 	}
@@ -329,7 +347,7 @@ int CMenu::_coverDownloader(bool missingOnly)
 					}
 					
 					_setThrdMsg(wfmt(_fmt("dlmsg10", L"Making %s"), sfmt("%s.wfc", coverList[i].c_str()).c_str()), listWeight + dlWeight * (float)(step + 1) / (float)nbSteps);
-					if (m_cf.preCacheCover(coverList[i].c_str(), png.data, true))
+					if (m_coverflow.preCacheCover(coverList[i].c_str(), png.data, true))
 					{
 						++count;
 						success = true;
@@ -366,7 +384,7 @@ int CMenu::_coverDownloader(bool missingOnly)
 							}
 
 							_setThrdMsg(wfmt(_fmt("dlmsg10", L"Making %s"), sfmt("%s.wfc", coverList[i].c_str()).c_str()), listWeight + dlWeight * (float)(step + 1) / (float)nbSteps);
-							if (m_cf.preCacheCover(coverList[i].c_str(), png.data, false))
+							if (m_coverflow.preCacheCover(coverList[i].c_str(), png.data, false))
 							{
 								++countFlat;
 								success = true;

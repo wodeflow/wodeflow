@@ -234,7 +234,7 @@ void CButtonsMgr::click(u32 id)
 	}
 }
 
-void CButtonsMgr::SElement::tick(void)
+void CButtonsMgr::SElement::tick(float dt)
 {
 	int alphaDist;
 
@@ -245,30 +245,32 @@ void CButtonsMgr::SElement::tick(void)
 	pos += (targetPos - pos) * 0.1f;
 }
 
-void CButtonsMgr::SLabel::tick(void)
+void CButtonsMgr::SLabel::tick(float dt)
 {
-	CButtonsMgr::SElement::tick();
-	text.tick();
+	CButtonsMgr::SElement::tick(dt);
+	text.tick(dt);
 }
 
-void CButtonsMgr::SButton::tick(void)
+void CButtonsMgr::SButton::tick(float dt)
 {
-	CButtonsMgr::SElement::tick();
-	click += -click * 0.2f;
+	CButtonsMgr::SElement::tick(dt);
+	//click += -click * 0.2f * dt;
+	click += -click * 10.f * dt;
 	if (click < 0.01f)
 		click = 0.f;
 }
 
-void CButtonsMgr::SProgressBar::tick(void)
+void CButtonsMgr::SProgressBar::tick(float dt)
 {
-	CButtonsMgr::SElement::tick();
-	val += (targetVal - val) * 0.1f;
+	CButtonsMgr::SElement::tick(dt);
+	//val += (targetVal - val) * 0.1f * dt;
+	val += (targetVal - val) * 5.f * dt;
 }
 
-void CButtonsMgr::tick(void)
+void CButtonsMgr::tick(float dt)
 {
 	for (u32 i = 0; i < m_elts.size(); ++i)
-		m_elts[i]->tick();
+		m_elts[i]->tick(dt);
 	if (m_rumble > 0 && --m_rumble == 0)
 		WPAD_Rumble(WPAD_CHAN_0, 0);
 }

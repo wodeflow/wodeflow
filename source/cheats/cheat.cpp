@@ -59,7 +59,7 @@ void CMenu::_CheatSettings() {
 	int txtavailable=0;
 	m_cheatSettingsPage = 1; // init page
 	
-	txtavailable = m_cheatfile.openTxtfile(fmt("%s/%s.txt", m_txtCheatDir.c_str(), m_cf.getId().c_str())); 
+	txtavailable = m_cheatfile.openTxtfile(fmt("%s/%s.txt", m_txtCheatDir.c_str(), m_coverflow.getId().c_str()));
 	
 	_showCheatSettings();
 	_textCheatSettings();
@@ -141,12 +141,11 @@ void CMenu::_CheatSettings() {
 					
 				if (check)
 				{
-					operation_ok = m_cheatfile.createGCT(fmt("%s/%s.gct", m_cheatDir.c_str(), m_cf.getId().c_str())); 
-					operation_ok = m_cheatfile.createTXT(fmt("%s/%s.txt", m_txtCheatDir.c_str(), m_cf.getId().c_str())); 
-					
+					operation_ok = m_cheatfile.createGCT(fmt("%s/%s.gct", m_cheatDir.c_str(), m_coverflow.getId().c_str()));
+					operation_ok = m_cheatfile.createTXT(fmt("%s/%s.txt", m_txtCheatDir.c_str(), m_coverflow.getId().c_str()));
 				}
 					
-				m_cfg.setOptBool(m_cf.getId(), "cheat",1);
+				m_cfg.setOptBool(m_coverflow.getId(), "cheat",1);
 				if (operation_ok)
 					break;
 			}
@@ -177,15 +176,15 @@ void CMenu::_CheatSettings() {
 				buffer = smartCoverAlloc(bufferSize);
 				
 				DBG_LOG("[cheat] download begin\n");
-				cheatfile = downloadfile(buffer.get(), bufferSize, sfmt(GECKOURL, m_cf.getId().c_str()).c_str(),CMenu::_downloadProgress, this);
+				cheatfile = downloadfile(buffer.get(), bufferSize, sfmt(GECKOURL, m_coverflow.getId().c_str()).c_str(),CMenu::_downloadProgress, this);
 				DBG_LOG("[cheat] download ends\n");
 
 				if (cheatfile.data != NULL && cheatfile.size > 65 && cheatfile.data[0] != '<')
 				{
-					DBG_LOG("[cheat] write buffer to file: %s/%s.txt\n", m_txtCheatDir.c_str(), m_cf.getId().c_str());
+					DBG_LOG("[cheat] write buffer to file: %s/%s.txt\n", m_txtCheatDir.c_str(), m_coverflow.getId().c_str());
 					
 					// cheat file was downloaded and presumably no 404
-					file = fopen(fmt("%s/%s.txt", m_txtCheatDir.c_str(), m_cf.getId().c_str()), "wb");
+					file = fopen(fmt("%s/%s.txt", m_txtCheatDir.c_str(), m_coverflow.getId().c_str()), "wb");
 							
 					if (file != NULL)
 					{
@@ -203,7 +202,7 @@ void CMenu::_CheatSettings() {
 					
 					// cheat code not found, show result
 					m_btnMgr.setText(m_cheatLblItem[0], _t("cheat4", L"Download not found."));
-					m_btnMgr.setText(m_cheatLblItem[1], wfmt(L"http://www.geckocodes.org/codes/R/%s.txt",m_cf.getId().c_str()));
+					m_btnMgr.setText(m_cheatLblItem[1], wfmt(L"http://www.geckocodes.org/codes/R/%s.txt",m_coverflow.getId().c_str()));
 					m_btnMgr.show(m_cheatLblItem[1]);
 				}
 			}

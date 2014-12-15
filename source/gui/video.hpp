@@ -14,14 +14,22 @@ public:
 	float x;
 	float y;
 public:
-	CTexCoord(void) { x = 0.f; y = 0.f; }
-	CTexCoord(float px, float py) { x = px; y = py; }
+	CTexCoord()
+		:x(0.f)
+		,y(0.f)
+	{
+	}
+	CTexCoord(float px, float py)
+		:x(px)
+		,y(py)
+	{
+	}
 };
 
 class CColor : public GXColor
 {
 public:
-	CColor(void) { r = 0; g = 0; b = 0; a = 0xFF; }
+	CColor() { r = 0; g = 0; b = 0; a = 0xFF; }
 	CColor(u8 pr, u8 pg, u8 pb) { r = pr; g = pg; b = pb; a = 0xFF; }
 	CColor(u8 pr, u8 pg, u8 pb, u8 pa) { r = pr; g = pg; b = pb; a = pa; }
 	CColor(u32 rgba8)
@@ -29,13 +37,21 @@ public:
 		a = (rgba8 & 0xFF000000) >> 24;
 		r = (rgba8 & 0x00FF0000) >> 16;
 		g = (rgba8 & 0x0000FF00) >> 8;
-		b = rgba8 & 0x000000FF;
+		b = (rgba8 & 0x000000FF) >> 0;
 	}
-	bool operator==(const CColor &c) const { return c.r == r && c.g == g && c.b == b && c.a == a; }
-	bool operator!=(const CColor &c) const { return c.r != r || c.g != g || c.b != b || c.a != a; }
 	void blend(const CColor &src);
 	static CColor interpolate(const CColor &c1, const CColor &c2, u8 n);
 };
+
+static inline bool operator==(const CColor &a, const CColor &b)
+{
+	return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
+}
+
+static inline bool operator!=(const CColor &a, const CColor &b)
+{
+	return !(a == b);
+}
 
 class CVideo
 {
@@ -63,27 +79,27 @@ public:
 	void shiftViewPort(float x, float y);
 private:
 	GXRModeObj *m_rmode;
-	void *m_frameBuf[2];
-	int m_curFB;
-	void *m_fifo;
-	float m_yScale;
-	u32 m_xfbHeight;
-	bool m_wide;
-	u32 m_width2D;
-	u32 m_height2D;
-	int m_x2D;
-	int m_y2D;
-	u8 m_aa;
-	bool m_aaAlpha;
-	int m_aaWidth;
-	int m_aaHeight;
-	SmartBuf m_stencil;
-	SmartBuf m_aaBuffer[8];
-	u32 m_aaBufferSize[8];
-	float m_vpX;
-	float m_vpY;
-	float m_vpW;
-	float m_vpH;
+	void *		m_frameBuf[2];
+	int			m_curFB;
+	void *		m_fifo;
+	float		m_yScale;
+	u32			m_xfbHeight;
+	bool		m_wide;
+	u32			m_width2D;
+	u32			m_height2D;
+	int			m_x2D;
+	int			m_y2D;
+	u8			m_aa;
+	bool		m_aaAlpha;
+	int			m_aaWidth;
+	int			m_aaHeight;
+	SmartBuf	m_stencil;
+	SmartBuf	m_aaBuffer[8];
+	u32			m_aaBufferSize[8];
+	float		m_vpX;
+	float		m_vpY;
+	float		m_vpW;
+	float		m_vpH;
 	// 
 	static const int _stencilWidth;
 	static const int _stencilHeight;
@@ -97,7 +113,7 @@ private:
 	void _drawAASceneWithAlpha(float w, float h);
 	void _setViewPort(float x, float y, float w, float h);
 private:
-	CVideo(const CVideo &);
+	CVideo(const CVideo &) = delete;
 };
 
 #endif //!defined(__VIDEO_HPP)

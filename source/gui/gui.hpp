@@ -46,7 +46,7 @@ public:
 	void up(void);
 	void down(void);
 	void draw(void);
-	void tick(void);
+	void tick(float dt);
 	void click(u32 id = (u32)-1);
 	u32 selected(void) const { return m_selected; }
 	void stopSounds(void);
@@ -85,7 +85,7 @@ private:
 		float targetScaleY;
 	public:
 		virtual ~SElement(void) { }
-		virtual void tick(void);
+		virtual void tick(float dt);
 	protected:
 		SElement(void) { }
 	};
@@ -100,7 +100,7 @@ private:
 		SSoundEffect hoverSound;
 	public:
 		SButton(void) { t = GUIELT_BUTTON; }
-		virtual void tick(void);
+		virtual void tick(float dt);
 	};
 	struct SLabel : public SElement
 	{
@@ -111,7 +111,7 @@ private:
 		STexture texBg;
 	public:
 		SLabel(void) { t = GUIELT_LABEL; }
-		virtual void tick(void);
+		virtual void tick(float dt);
 	};
 	struct SProgressBar : public SElement
 	{
@@ -120,7 +120,7 @@ private:
 		float targetVal;
 	public:
 		SProgressBar(void) { t = GUIELT_PROGRESS; }
-		virtual void tick(void);
+		virtual void tick(float dt);
 	};
 private:
 	std::vector<SmartPtr<SElement> > m_elts;

@@ -66,8 +66,8 @@ void CMenu::_config(int page)
 	int nextPage = page;
 
 	WPAD_Rumble(WPAD_CHAN_0, 0);
-	m_curGameId = m_cf.getId();
-	m_cf.clear();
+	m_curGameId = m_coverflow.getId();
+	m_coverflow.clear();
 	while (nextPage > 0 && nextPage <= CMenu::_nbCfgPages)
 		switch (nextPage)
 		{
@@ -102,7 +102,7 @@ void CMenu::_config(int page)
 		}
 	WPAD_Rumble(WPAD_CHAN_0, 0);
 	m_cfg.save();
-	m_cf.setBoxMode(m_cfg.getBool(" GENERAL", "box_mode"));
+	m_coverflow.setBoxMode(m_cfg.getBool(" GENERAL", "box_mode"));
 	_initCF();
 }
 

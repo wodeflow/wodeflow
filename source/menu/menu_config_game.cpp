@@ -70,7 +70,7 @@ void CMenu::_showGameSettings(void)
 	int i;
 	wstringEx title(_t("cfgg1", L"Settings"));
 	title += L" [";
-	title += wstringEx(m_cf.getId());
+	title += wstringEx(m_coverflow.getId());
 	title += L"]";
 	m_btnMgr.setText(m_gameSettingsLblTitle, title);
 	_setBg(m_gameSettingsBg, m_gameSettingsBg);
@@ -154,7 +154,7 @@ void CMenu::_showGameSettings(void)
 		if (m_gameSettingsLblUser[i] != -1u)
 			m_btnMgr.show(m_gameSettingsLblUser[i]);
 
-	string id(m_cf.getId());
+	string id(m_coverflow.getId());
 	m_btnMgr.setText(m_gameSettingsLblPage, wfmt(L"%i / %i", m_gameSettingsPage, 3));
 	m_btnMgr.setText(m_gameSettingsBtnOcarina, _optBoolToString(m_cfg.getOptBool(id, "cheat")));
 	m_btnMgr.setText(m_gameSettingsBtnVipatch, _optBoolToString(m_cfg.getOptBool(id, "vipatch", 0)));
@@ -173,7 +173,7 @@ void CMenu::_gameSettings(void)
 {
 	s32 padsState;
 	WPADData *wd;
-	string id(m_cf.getId());
+	string id(m_coverflow.getId());
 
 	m_gameSettingsPage = 1;
 	_showGameSettings();
@@ -281,11 +281,11 @@ void CMenu::_gameSettings(void)
 			}
 			else if (m_btnMgr.selected() == m_gameSettingsBtnCover)
 			{
-				m_cf.stopPicLoader(true);	// Empty cover cache
+				m_coverflow.stopPicLoader(true);	// Empty cover cache
 				_hideGameSettings();
 				_download(id);
 				_showGameSettings();
-				m_cf.startPicLoader();
+				m_coverflow.startPicLoader();
 			}
 			else if (m_btnMgr.selected() == m_gameSettingsBtnCheat)
 			{

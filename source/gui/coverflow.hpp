@@ -37,7 +37,7 @@ public:
 	// 
 	void simulateOtherScreenFormat(bool s);
 	// Commands
-	void tick(void);
+	void tick(float dt);
 	bool findId(const char *id, bool instant = false);
 	void pageUp(void);
 	void pageDown(void);
@@ -214,13 +214,13 @@ private:
 	int m_delay;
 	int m_minDelay;
 	int m_jump;
-	mutex m_mutex;
+	mutex m_items_lock;
 	volatile bool m_loadingPic;
 	volatile bool m_waitingToClear;
 	volatile bool m_moved;
 	volatile int m_hqCover;
 	bool m_selected;
-	int m_tickCount;
+	float m_tickCount;
 	STexture m_loadingTexture;
 	STexture m_noCoverTexture;
 	STexture m_dvdSkin;
@@ -282,7 +282,7 @@ private:
 	void _updateAllTargets(bool instant = false);
 	void _loadCover(int i, int item);
 	void _loadCoverTexture(int i);
-	void _coverTick(int i);
+	void _coverTick(int i, float dt);
 	void _unselect(void);
 	Vector3D _cameraMoves(void);
 	Vector3D _coverMovesA(void);
