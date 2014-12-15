@@ -529,11 +529,12 @@ unsigned long GetNumISOs(unsigned long partition_idx)
 	return ISO_COUNT;
 }
 
-int GetPartitionInfo(unsigned long partition_idx, PartitionInfo_t* PartitionInfo)
+int GetPartitionInfo(unsigned int partition_idx, PartitionInfo_t* PartitionInfo)
 {
-	//gprintf("GetPartitionInfo\n");
+	snprintf(PartitionInfo->name, 64, "dev%u", partition_idx);
 
-	sprintf(PartitionInfo->name, "dev%u", partition_idx);
+	//log_printf("GetPartitionInfo: %s\n", PartitionInfo->name);
+
 	PartitionInfo->NumISOs = 10;
 	PartitionInfo->partition_mode = pm_read_write;
 

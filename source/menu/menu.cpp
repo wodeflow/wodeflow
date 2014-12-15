@@ -1120,10 +1120,16 @@ const wstringEx CMenu::_fmt(const char *key, const wchar_t *def)
 bool CMenu::_loadGameList(void)
 {
 	s32 ret;
-	char defaultPartition[64];
-	u32 defaultPartitionLen;
+	u32 defaultPartitionLen = 0;
 	u32 defaultPartitionNr = WBFS_GetDefaultPartition();
-	WBFS_GetPartitionName(defaultPartitionNr, (char *) defaultPartition, &defaultPartitionLen);
+
+	std::string defaultPartition;
+	defaultPartition.resize(64);
+
+	if (WBFS_GetPartitionName(defaultPartitionNr, (char *)&defaultPartition[0], &defaultPartitionLen) < 0)
+		defaultPartition = "all";
+	else
+		defaultPartition.resize(defaultPartitionLen);
 
 	ret = WBFS_OpenNamed((char *) m_cfg.getString(" GENERAL", "partition", defaultPartition).c_str());
 	if (ret < 0)

@@ -90,7 +90,7 @@ int CloseWode( void );
 
 unsigned long GetNumPartitions( void );
 unsigned long GetNumISOs(unsigned long partition_idx);
-int GetPartitionInfo(unsigned long partition_idx, PartitionInfo_t* PartitionInfo);
+int GetPartitionInfo(unsigned int partition_idx, PartitionInfo_t* PartitionInfo);
 int GetISOInfo(unsigned long partition_idx, unsigned long iso_idx, ISOInfo_t * ISOInfo);
 
 unsigned long GetMaxFavorites( void );

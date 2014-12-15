@@ -5,6 +5,8 @@
 #include <wiiuse/wpad.h>
 
 #include "gecko.h"
+#include "logger.h"
+#include <string>
 
 using namespace std;
 
@@ -64,11 +66,16 @@ void CMenu::_showConfig5(void)
 		if (m_config5LblUser[i] != -1u)
 			m_btnMgr.show(m_config5LblUser[i]);
 	// 
-	char defaultPartition[255];
-	u32 defaultPartitionLen;
-	memset((char *) defaultPartition, 0, 255);
+	std::string defaultPartition;
+	defaultPartition.resize(64);
+
+	u32 defaultPartitionLen = 0;
+
 	u32 defaultPartitionNr = WBFS_GetDefaultPartition();
-	WBFS_GetPartitionName(defaultPartitionNr, (char *) defaultPartition, &defaultPartitionLen);
+	if (WBFS_GetPartitionName(defaultPartitionNr, (char *)&defaultPartition[0], &defaultPartitionLen))
+		defaultPartition = "all";
+
+	defaultPartition.resize(defaultPartitionLen);
 	
 	m_btnMgr.setText(m_configLblPage, wfmt(L"%i / %i", g_curPage, m_locked ? g_curPage : CMenu::_nbCfgPages));
 	m_btnMgr.setText(m_config5LblPartition, m_cfg.getString(" GENERAL", "partition", defaultPartition));
@@ -131,7 +138,7 @@ int CMenu::_config5(void)
 		if ((padsState & WPAD_BUTTON_A) != 0)
 		{
 			char buf[32];
-			u32 buflen;
+			u32 buflen = 0;
 			memset((char *) &buf, 0, 32);
 
 			m_btnMgr.click();
@@ -141,29 +148,43 @@ int CMenu::_config5(void)
 			/* next partition */
 			else if (m_btnMgr.selected() == m_config5BtnPartitionP)
 			{
+				std::string defaultPartition;
+				defaultPartition.resize(64);
+
 				currentPartition = loopNum(currentPartition + 1, amountOfPartitions);
 				
 				if (currentPartition != (amountOfPartitions-1)) {
-					gprintf("Next item: %d\n", currentPartition);
-					WBFS_GetPartitionName(currentPartition, (char *) buf, &buflen);
-					gprintf("Which is: %s\n", buf);
+					//gprintf("Next item: %d\n", currentPartition);
+					
+					if (WBFS_GetPartitionName(currentPartition, (char *)&defaultPartition[0], &buflen) < 0)
+						defaultPartition = "all";
+					else
+						defaultPartition.resize(buflen);
+					//gprintf("Which is: %s\n", buf);
 				} else {
-					sprintf(buf, "all");
+					defaultPartition = "all";
 				}
-				m_cfg.setString(" GENERAL", "partition", buf);
+				m_cfg.setString(" GENERAL", "partition", defaultPartition);
 				_showConfig5();
 			}
 			/* prev partition */
 			else if (m_btnMgr.selected() == m_config5BtnPartitionM)
 			{
+				std::string defaultPartition;
+				defaultPartition.resize(64);
+
 				currentPartition = loopNum(currentPartition - 1, amountOfPartitions);
 				if (currentPartition != (amountOfPartitions-1)) {
 				
 					gprintf("Next item: %d\n", currentPartition);
-					WBFS_GetPartitionName(currentPartition, (char *) buf, &buflen);
-					gprintf("Which is: %s\n", buf);
+					if (WBFS_GetPartitionName(currentPartition, (char *)&defaultPartition[0], &buflen) < 0)
+						defaultPartition = "all";
+					else
+						defaultPartition.resize(buflen);
+
+					//gprintf("Which is: %s\n", buf);
 				} else {
-					sprintf(buf, "all");
+					defaultPartition = "all";
 				}
 				m_cfg.setString(" GENERAL", "partition", buf);
 				_showConfig5();
